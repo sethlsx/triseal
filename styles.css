@@ -188,6 +188,8 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b2eee0; outline-
 
 .wake-panel { position: relative; margin-top: 11px; padding: 12px 15px 9px; overflow: hidden; border: 1px solid rgba(149, 207, 190, .15); border-radius: 15px; background: linear-gradient(110deg, rgba(14, 35, 40, .92), rgba(17, 38, 44, .73)); }
 .wake-panel.wake-burst { animation: wake-burst .78s cubic-bezier(.16,.8,.24,1); }
+.wake-panel.resonance-burst { animation: resonance-pulse .62s cubic-bezier(.2,.8,.25,1); }
+.wake-panel.wake-burst.resonance-burst { animation: wake-burst .78s cubic-bezier(.16,.8,.24,1); }
 .wake-burst .wake-socket.filled > span { animation: socket-flash .58s ease-out both; }
 .wake-burst .wake-socket:nth-child(2) > span { animation-delay: .07s; }
 .wake-burst .wake-socket:nth-child(3) > span { animation-delay: .14s; }
@@ -205,6 +207,20 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b2eee0; outline-
 .wake-socket.filled.ember > span { color: #ffad85; border-color: rgba(246, 159, 121, .7); box-shadow: 0 0 15px rgba(230, 140, 105, .22); }
 .wake-socket.filled.glass > span { color: #d5c1ff; border-color: rgba(192, 170, 245, .7); box-shadow: 0 0 15px rgba(182, 155, 236, .22); }
 .wake-hint { text-align: center; color: #6f8981; margin: 3px 0 0; font-size: 8px; letter-spacing: .04em; }
+.resonance-options { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 5px; margin: 5px 0 0; }
+.resonance-option { min-width: 0; display: grid; justify-items: center; gap: 2px; padding: 4px 3px; border: 1px solid rgba(149, 207, 190, .12); border-radius: 7px; background: rgba(6, 20, 26, .32); text-align: center; }
+.resonance-option small { color: #81978d; font-size: 7px; line-height: 1.2; }
+.resonance-option strong { font-size: 7px; font-weight: 600; line-height: 1.2; }
+.resonance-option.resonance-steam strong { color: #ffc58e; }
+.resonance-option.resonance-prism strong { color: #d9c4ff; }
+.resonance-option.resonance-mirror strong { color: #97e5d6; }
+.resonance-option.unavailable-option { opacity: .36; }
+.resonance-note { display: flex; align-items: baseline; justify-content: center; gap: 7px; margin: 4px 0 0; text-align: center; }
+.resonance-note strong { font-size: 8px; letter-spacing: .12em; text-transform: uppercase; }
+.resonance-note span { color: #b1c7bc; font-size: 8px; }
+.resonance-steam strong { color: #ffc58e; }
+.resonance-prism strong { color: #d9c4ff; }
+.resonance-mirror strong { color: #97e5d6; }
 .wake-complete { border-color: rgba(137, 220, 195, .48); box-shadow: 0 0 20px rgba(99, 208, 178, .1), inset 0 0 25px rgba(99, 208, 178, .05); }
 .wake-complete .wake-hint { color: #a2e6d0; }
 
@@ -243,6 +259,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b2eee0; outline-
 .card-cost.free { background: #305d58; }
 .sigil-chip { width: 22px; height: 22px; display: grid; place-items: center; border-radius: 50%; background: color-mix(in srgb, var(--tone), white 52%); color: #172c30; font-size: 13px; border: 1px solid rgba(28, 53, 54, .19); }
 .card-illustration { z-index: 1; position: relative; height: 49px; margin: 4px 0 6px; display: grid; place-items: center; color: var(--tone); overflow: hidden; border-top: 1px solid rgba(51, 78, 69, .1); border-bottom: 1px solid rgba(51, 78, 69, .1); }
+.prism-card-bonus { position: absolute; z-index: 2; top: 4px; right: 3px; padding: 2px 5px; border: 1px solid rgba(121, 82, 156, .32); border-radius: 999px; color: #69477d; background: rgba(225, 207, 242, .82); font-size: 8px; line-height: 1; box-shadow: 0 0 9px rgba(161, 117, 197, .32); }
 .card-illustration > span { z-index: 1; font-size: 29px; line-height: 1; text-shadow: 0 2px 12px color-mix(in srgb, var(--tone), transparent 65%); }
 .card-illustration > i { position: absolute; width: 50px; height: 50px; border: 1px solid color-mix(in srgb, var(--tone), transparent 48%); border-radius: 50%; transform: scaleY(.45) rotate(38deg); }
 .card-illustration > i::after { content: ""; position: absolute; inset: 8px -13px; border: 1px solid color-mix(in srgb, var(--tone), transparent 62%); border-radius: 50%; transform: rotate(-65deg); }
@@ -341,6 +358,7 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b2eee0; outline-
 @keyframes foe-impact { 0%, 100% { transform: translateX(0) scale(1); filter: brightness(1); } 24% { transform: translateX(-7px) rotate(-1.4deg) scale(1.035); filter: brightness(1.55); } 48% { transform: translateX(6px) rotate(1.2deg) scale(.99); filter: brightness(1.2); } 72% { transform: translateX(-3px) rotate(-.5deg); filter: brightness(1.05); } }
 @keyframes damage-pop { 0% { opacity: 0; transform: translateY(9px) scale(.65); } 18% { opacity: 1; transform: translateY(-2px) scale(1.22); } 70% { opacity: 1; transform: translateY(-18px) scale(1); } 100% { opacity: 0; transform: translateY(-34px) scale(.92); } }
 @keyframes wake-burst { 0%, 100% { transform: scale(1); filter: brightness(1); } 25% { transform: scale(1.025); filter: brightness(1.7); } 58% { transform: scale(.995); filter: brightness(1.15); } }
+@keyframes resonance-pulse { 0%, 100% { transform: scale(1); filter: brightness(1); } 34% { transform: scale(1.012); filter: brightness(1.55); } 72% { transform: scale(.997); filter: brightness(1.1); } }
 @keyframes socket-flash { 0%, 100% { transform: scale(1); } 38% { transform: scale(1.55); box-shadow: 0 0 23px currentColor; } 70% { transform: scale(.92); } }
 @keyframes guard-burst { 0%, 100% { transform: scale(1); filter: brightness(1); } 38% { transform: scale(1.08); filter: brightness(1.65); } 72% { transform: scale(.98); } }
 @keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
@@ -419,6 +437,10 @@ button:focus-visible, input:focus-visible { outline: 2px solid #b2eee0; outline-
   .wake-socket > span { width: 24px; height: 24px; font-size: 11px; }
   .wake-socket small { font-size: 7px; }
   .wake-line { top: 11px; }
+  .resonance-options { gap: 3px; margin-top: 4px; }
+  .resonance-option small, .resonance-option strong { font-size: 6px; }
+  .resonance-note { flex-wrap: wrap; gap: 3px 6px; }
+  .resonance-note strong, .resonance-note span { font-size: 7px; }
   .battle-side { grid-template-columns: 1fr; padding: 9px; border-radius: 13px; gap: 0; }
   .side-title { display: none; }
   .side-actions { grid-column: 1; display: flex; align-items: center; gap: 6px; margin: 0; }

@@ -17,11 +17,12 @@ The charts of the Drowned Observatory were woven from strands that remember the 
 1. The player sees each foe's next intent before choosing a card.
 2. Draw five cards and receive three energy.
 3. Play cards in any order, aim their effects, and watch the current's three-sigil braid fill. Each card arcs from the hand into its target before its effect resolves.
-4. Playing three distinct sigils in one turn triggers a Wake: a modest area strike, a guard pulse, and one extra draw. The impact, guard, and drawn card each get a clear motion cue; the Wake gets a larger burst. The UI previews each card and explains the trigger before it resolves.
-5. End the turn; surviving foes resolve their visible intents and reveal their next move.
-6. After a win, choose one of three cards or skip the reward. Continue through a compact route to the final encounter.
+4. The first two distinct sigils played in a turn choose one of three Resonances: Tide + Ember weakens foe attacks, Ember + Glass charges the next attack card, and Glass + Tide grants guard. This makes card order a tactical choice: choose control, offense, or defense against the visible intents.
+5. Playing the third distinct sigil triggers a Wake: a modest area strike, a guard pulse, and one extra draw. The impact, guard, and drawn card each get a clear motion cue; the Wake gets a larger burst. The UI previews each card and explains the trigger before it resolves.
+6. End the turn; surviving foes resolve their visible intents and reveal their next move.
+7. After a win, choose one of three cards or skip the reward. Continue through a compact route to the final encounter.
 
-Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a card, not a rigid class: a deck can use a Tide attack or an Ember defense. A repeated sigil does not erase progress already made in the current turn; it simply does not fill a new socket. This keeps the combo exciting without making one bad draw invalidate the turn.
+Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a card, not a rigid class: a deck can use a Tide attack or an Ember defense. A repeated sigil does not erase progress already made in the current turn; it simply does not fill a new socket. The first pair is selected by which different sigil the player chooses second, so the visible enemy intent can guide the choice. This keeps the combo exciting without making one bad draw invalidate the turn.
 
 ## First playable slice
 
@@ -37,7 +38,7 @@ Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a car
 
 ## Feedback translated into choices
 
-- **Players value simple rules with depth.** Keep the Wake rule visible and explain its payoff at the moment it becomes available.
+- **Players value simple rules with depth.** Keep the two-step braid visible: the first pair picks one understandable tactical reaction, and the third sigil triggers the Wake. Explain both payoffs in the tutorial and on the board.
 - **Runs can feel samey when high difficulty narrows viable builds.** Give each sigil several action types and make card rewards useful across multiple combinations.
 - **Unavoidable damage and early randomness feel unfair.** Telegraph enemy actions, let players see likely incoming damage, and provide one limited hand correction.
 - **Dense systems make a new deckbuilder look like homework.** Introduce mechanics in play, use plain card text, and keep the first screen focused on the current turn.
@@ -50,6 +51,6 @@ The prototype does not establish final balance, the commercial name, long-term c
 
 ## 简体中文概述
 
-《三印唤潮》（暂定名）是一款短局制卡牌肉鸽。玩家每回合先看见敌人的意图，再按任意顺序打出卡牌。牌面带有「潮汐、余烬、琉璃」三种印记；同一回合连齐三种印记会触发「唤潮」，造成范围伤害、获得格挡并补一张牌。重复印记不会抹掉已有进度。
+《三印唤潮》（暂定名）是一款短局制卡牌肉鸽。玩家每回合先看见敌人的意图，再按任意顺序打出卡牌。前两种不同印记会组合成「蒸雾、棱光、映盾」之一，让玩家根据当前威胁选择削弱、强化攻击或获得格挡；再打出第三种印记触发「唤潮」，造成范围伤害、获得格挡并补一张牌。重复印记不会抹掉已有进度。
 
 首个可玩版本聚焦四点：核心规则一分钟内讲明白，随机事件不直接剥夺玩家操作空间，单局控制在约 15–20 分钟，并支持英语和简体中文。美术与音频从零制作，来源记录见 [素材来源](../assets/PROVENANCE.md)。

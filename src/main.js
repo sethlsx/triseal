@@ -4,6 +4,8 @@ import { activateAudio, playSound, setSoundEnabled, setMusicEnabled, setVolume, 
 const SAVE_KEY = "spindlewake.save.v1";
 const MAX_HAND = 10;
 const STARTING_DECK = ["needle", "needle", "needle", "needle", "brace", "brace", "brace", "glassline", "glassline", "undertow"];
+const RESONANCE_BY_PAIR = { "ember+glass": "prism", "glass+tide": "mirror", "ember+tide": "steam" };
+const DAMAGE_CARD_TYPES = new Set(["damage", "damageBlock", "allDamage", "damageDraw", "allDamageBlock"]);
 const app = document.querySelector("#app");
 
 function loadState() {
@@ -97,6 +99,9 @@ function beginTurn(run, ensureOpeningBraid = false) {
   fight.energy = 3;
   fight.guard = 0;
   fight.sigils = [];
+  fight.resonance = null;
+  fight.attackReduction = 0;
+  fight.prismReady = false;
   fight.wakeUsed = false;
   if (ensureOpeningBraid) {
     for (const sigil of SIGILS) {
@@ -112,7 +117,8 @@ function makeEncounter(run, encounterId) {
   const encounter = ENCOUNTERS[encounterId];
   run.encounterId = encounterId;
   run.fight = {
-    turn: 0, energy: 0, guard: 0, sigils: [], wakeUsed: false,
+    turn: 0, energy: 0, guard: 0, sigils: [], resonance: null,
+    attackReduction: 0, prismReady: false, wakeUsed: false,
     hand: [], discardPile: [], drawPile: shuffle(run, run.deck),
     enemies: encounter.enemies.map((id) => ({ id, hp: ENEMIES[id].hp, maxHp: ENEMIES[id].hp, guard: 0, intentIndex: 0, power: 0 })),
   };
@@ -153,7 +159,10 @@ function addGuard(run, amount) {
 function currentIntent(enemy) {
   const pattern = ENEMIES[enemy.id].pattern;
   const base = pattern[enemy.intentIndex % pattern.length];
-  if (base.type === "attack") return { ...base, value: base.value + enemy.power };
+  if (base.type === "attack") {
+    const reduction = state.run?.fight?.attackReduction || 0;
+    return { ...base, value: Math.max(0, base.value + enemy.power - reduction) };
+  }
   return base;
 }
 
@@ -191,9 +200,37 @@ function triggerWake(run) {
   playSound("wake");
 }
 
+function triggerResonance(run, sigils) {
+  const fight = run.fight;
+  if (fight.resonance || sigils.length < 2) return;
+  const pair = [...sigils].sort().join("+");
+  const resonance = RESONANCE_BY_PAIR[pair];
+  if (!resonance) return;
+  fight.resonance = resonance;
+  if (ui.cardFx) ui.cardFx.resonance = resonance;
+
+  if (resonance === "steam") {
+    fight.attackReduction = 2;
+    event("logSteam");
+  } else if (resonance === "prism") {
+    fight.prismReady = true;
+    event("logPrism");
+  } else {
+    addGuard(run, 5);
+    event("logMirror");
+  }
+  playSound("wake");
+}
+
 function noteSigil(run, sigil) {
-  if (!run.fight.sigils.includes(sigil)) run.fight.sigils.push(sigil);
-  if (run.fight.sigils.length === 3) triggerWake(run);
+  const fight = run.fight;
+  if (!fight.sigils.includes(sigil)) fight.sigils.push(sigil);
+  // The first two distinct sigils set the turn's reaction. This also repairs
+  // a mid-fight save created before Resonance existed.
+  if (!fight.wakeUsed && !fight.resonance && fight.sigils.length >= 2) {
+    triggerResonance(run, fight.sigils.slice(0, 2));
+  }
+  if (fight.sigils.length === 3) triggerWake(run);
 }
 
 function startRun(seedValue) {
@@ -226,9 +263,14 @@ function newRunFromHome() {
 function applyCard(run, cardId, targetIndex) {
   const fight = run.fight;
   const card = CARDS[cardId];
+  const prismBonus = fight.prismReady && DAMAGE_CARD_TYPES.has(card.type) ? 3 : 0;
+  if (prismBonus > 0) {
+    fight.prismReady = false;
+    event("logPrismStrike", { n: prismBonus });
+  }
   switch (card.type) {
     case "damage":
-      damageEnemy(run, targetIndex, card.value);
+      damageEnemy(run, targetIndex, card.value + prismBonus);
       break;
     case "block":
       addGuard(run, card.value);
@@ -237,7 +279,7 @@ function applyCard(run, cardId, targetIndex) {
       drawCards(run, card.value);
       break;
     case "damageBlock":
-      damageEnemy(run, targetIndex, card.damage);
+      damageEnemy(run, targetIndex, card.damage + prismBonus);
       addGuard(run, card.block);
       break;
     case "blockDraw":
@@ -245,14 +287,14 @@ function applyCard(run, cardId, targetIndex) {
       drawCards(run, card.draw);
       break;
     case "allDamage":
-      fight.enemies.forEach((enemy, index) => { if (enemy.hp > 0) damageEnemy(run, index, card.value); });
+      fight.enemies.forEach((enemy, index) => { if (enemy.hp > 0) damageEnemy(run, index, card.value + prismBonus); });
       break;
     case "damageDraw":
-      damageEnemy(run, targetIndex, card.damage);
+      damageEnemy(run, targetIndex, card.damage + prismBonus);
       drawCards(run, card.draw);
       break;
     case "allDamageBlock":
-      fight.enemies.forEach((enemy, index) => { if (enemy.hp > 0) damageEnemy(run, index, card.damage); });
+      fight.enemies.forEach((enemy, index) => { if (enemy.hp > 0) damageEnemy(run, index, card.damage + prismBonus); });
       addGuard(run, card.block);
       break;
     default:
@@ -538,10 +580,12 @@ function renderCard(cardId, options = {}) {
   const dataIndex = options.reward ? "" : `data-card-index="${index}"`;
   const dataId = options.reward ? `data-card-id="${cardId}"` : "";
   const focusId = options.reward ? `reward-${cardId}` : `hand-${index}`;
-  const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}`;
+  const prismBonus = !options.reward && state.run?.fight?.prismReady && DAMAGE_CARD_TYPES.has(card.type);
+  const previewText = prismBonus ? tr("prismCardPreview", { n: 3 }) : "";
+  const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}${previewText ? ` ${previewText}` : ""}`;
   return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""} ${dealing ? "deal-in" : ""}" style="${dealing ? `--deal-order:${index}` : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
     <span class="card-topline"><span class="card-cost ${card.cost === 0 ? "free" : ""}">${card.cost}</span><span class="sigil-chip" title="${tr(sigilKey)}">${SIGIL_GLYPH[card.sigil]}</span></span>
-    <span class="card-illustration" aria-hidden="true"><span>${card.glyph}</span><i></i></span>
+    <span class="card-illustration" aria-hidden="true"><span>${card.glyph}</span><i></i>${prismBonus ? `<b class="prism-card-bonus">+3</b>` : ""}</span>
     <span class="card-title">${escapeHtml(lang.name)}</span>
     <span class="card-description">${escapeHtml(lang.text)}</span>
     <span class="card-bottomline"><span class="card-sigil-name">${tr(sigilKey)}</span><span class="card-cost-label">${tr("cardCost")}</span></span>
@@ -606,13 +650,32 @@ function renderMetrics() {
 function renderWake() {
   const fight = state.run.fight;
   const ready = fight.wakeUsed;
-  return `<section class="wake-panel ${ready ? "wake-complete" : ""} ${ui.cardFx?.wake ? "wake-burst" : ""}" aria-label="${tr("wakeTitle")}">
+  const resonanceKeys = {
+    steam: ["resonanceSteamTitle", "resonanceSteamEffect"],
+    prism: ["resonancePrismTitle", "resonancePrismEffect"],
+    mirror: ["resonanceMirrorTitle", "resonanceMirrorEffect"],
+  };
+  const resonanceText = resonanceKeys[fight.resonance];
+  const resonanceEffectKey = fight.resonance === "prism" && !fight.prismReady
+    ? "resonancePrismSpent"
+    : resonanceText?.[1];
+  const options = [
+    { id: "steam", pair: ["tide", "ember"], label: "resonanceSteamOption" },
+    { id: "prism", pair: ["ember", "glass"], label: "resonancePrismOption" },
+    { id: "mirror", pair: ["glass", "tide"], label: "resonanceMirrorOption" },
+  ];
+  const optionsMarkup = options.map(({ id, pair, label }) => {
+    const unavailable = fight.sigils.length === 1 && !pair.includes(fight.sigils[0]);
+    const pairName = pair.map((sigil) => tr(SIGIL_NAME[sigil][state.locale])).join(" + ");
+    return `<span class="resonance-option resonance-${id} ${unavailable ? "unavailable-option" : ""}"><small>${pairName}</small><strong>${tr(label)}</strong></span>`;
+  }).join("");
+  return `<section class="wake-panel ${ready ? "wake-complete" : ""} ${ui.cardFx?.wake ? "wake-burst" : ""} ${ui.cardFx?.resonance ? `resonance-burst resonance-${ui.cardFx.resonance}` : ""}" aria-label="${tr("wakeTitle")}">
     <div class="wake-heading"><div><span class="section-eyebrow">${tr("wakeProgress")}</span><h2>${tr("wakeTitle")}</h2></div><span class="wake-effect">${tr("wakeEffect")}</span></div>
     <div class="wake-rail" role="img" aria-label="${tr("wakeTitle")}: ${tr("wakeCounter", { n: fight.sigils.length })}">
       ${SIGILS.map((sigil) => `<div class="wake-socket ${fight.sigils.includes(sigil) ? `filled ${sigil}` : ""}"><span>${fight.sigils.includes(sigil) ? SIGIL_GLYPH[sigil] : "·"}</span><small>${tr(SIGIL_NAME[sigil][state.locale])}</small></div>`).join("")}
       <div class="wake-line" aria-hidden="true"><i style="--progress:${Math.min(fight.sigils.length, 3) / 3 * 100}%"></i></div>
     </div>
-    <p class="wake-hint">${ready ? tr("wakeReady") : tr("wakeHint")}</p>
+    ${resonanceText ? `<div class="resonance-note resonance-${fight.resonance}"><strong>${tr(resonanceText[0])}</strong><span>${tr(resonanceEffectKey)}</span></div><p class="wake-hint">${ready ? tr("wakeReady") : tr("resonanceWakeHint")}</p>` : `<div class="resonance-options">${optionsMarkup}</div><p class="wake-hint">${tr("wakeHint")}</p>`}
   </section>`;
 }
 
