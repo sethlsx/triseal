@@ -1,20 +1,22 @@
-# Threadwake (working title)
+# Spindlewake (working title)
 
 **A compact card roguelite about braiding three currents into one decisive wake.**
 
-Threadwake is an original, browser-first prototype for players who enjoy planning a turn, shaping a run, and discovering surprising card combinations. Its central rule is called a **Wake**: play cards carrying three different sigils in one turn to create a burst of shared momentum.
+Spindlewake is an original, browser-first prototype for players who enjoy planning a turn, shaping a run, and discovering surprising card combinations. Its central rule is called a **Wake**: play cards carrying three different sigils in one turn to create a burst of shared momentum.
 
 The game takes place in a drowned observatory whose charts are woven from living thread. Each expedition follows a short route through shifting sea creatures and broken instruments. Enemy intentions stay visible while you plan, and every card explains its effect in plain language.
 
 ## Play
 
-This is an early playable slice. Once the game is implemented, start a local server from this folder and open `http://localhost:4173`:
+This is an early playable slice. Start a local server from this folder and open `http://localhost:4173`:
 
 ```sh
 python3 -m http.server 4173
 ```
 
 No account, download, external asset host, or build step is required.
+
+Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Click a card, then choose a foe when asked. Press **1–5** to play a card, **← / →** to choose a foe, **Enter** to confirm a target, **E** to end a turn, **R** to reweave, and **Esc** to pause. The run autosaves locally, and the opening hand always contains all three sigils so the Wake can be learned immediately.
 
 ## Design goals
 
@@ -34,4 +36,4 @@ English is the default. Simplified Chinese is available from the in-game languag
 - [Design brief](docs/DESIGN.md)
 - [Asset provenance](assets/PROVENANCE.md)
 
-The research note is a targeted qualitative scan of public discussions, not a representative player survey. Threadwake is a working title and an experimental prototype, not a released commercial game.
+The research note is a targeted qualitative scan of public discussions, not a representative player survey. Spindlewake is a working title and an experimental prototype, not a released commercial game.
