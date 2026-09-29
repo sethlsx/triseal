@@ -22,7 +22,7 @@ The local session did not have Xpoz access. Reddit findings below were checked a
 5. **Run length and interruption.** In that July 2026 discussion, a player says runs feel too long and asks for shorter sessions with meaningful choices and a save-and-quit option.
 6. **A familiar formula is not enough.** Replies to the same discussion describe the genre as crowded and warn that a surface-level gimmick does not communicate a real player benefit. Several players say they return to Slay the Spire because alternatives may lack its balance, variety, clarity, or polish.
 
-## Design implications for The Third Current
+## Design implications for Triseal
 
 | Player signal | First-version response | How we can observe it |
 |---|---|---|

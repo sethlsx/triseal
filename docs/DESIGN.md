@@ -1,4 +1,4 @@
-# The Third Current — design brief
+# Triseal — design brief
 
 **Status:** working concept, first playable slice  
 **Audience:** international PC and mobile-browser players; English by default, Simplified Chinese included  
@@ -16,8 +16,8 @@ The charts of the Drowned Observatory were woven from strands that remember the 
 
 1. The player sees each foe's next intent before choosing a card.
 2. Draw five cards and receive three energy.
-3. Play cards in any order, aim their effects, and watch the current's three-sigil braid fill.
-4. Playing three distinct sigils in one turn triggers a Wake: a modest area strike, a guard pulse, and one extra draw. The UI previews each card and explains the trigger before it resolves.
+3. Play cards in any order, aim their effects, and watch the current's three-sigil braid fill. Each card arcs from the hand into its target before its effect resolves.
+4. Playing three distinct sigils in one turn triggers a Wake: a modest area strike, a guard pulse, and one extra draw. The impact, guard, and drawn card each get a clear motion cue; the Wake gets a larger burst. The UI previews each card and explains the trigger before it resolves.
 5. End the turn; surviving foes resolve their visible intents and reveal their next move.
 6. After a win, choose one of three cards or skip the reward. Continue through a compact route to the final encounter.
 
@@ -33,6 +33,7 @@ Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a car
 - A one-use **Reweave** per expedition: replace the hand once before ending a turn. This is an agency tool, not a guarantee of a win.
 - Local autosave at safe route points and a manual pause menu.
 - English and Simplified Chinese, keyboard and pointer input, adjustable sound, and reduced motion.
+- Card-flight and impact animation authored in CSS and the Web Animations API; the reduced-motion setting and OS preference skip the flight and shorten interface effects.
 
 ## Feedback translated into choices
 

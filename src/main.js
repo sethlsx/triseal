@@ -23,7 +23,7 @@ function loadState() {
 }
 
 const state = loadState();
-const ui = { modal: null, pendingCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null };
+const ui = { modal: null, pendingCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, cardFx: null };
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music);
 setVolume(state.volume);
@@ -124,6 +124,7 @@ function makeEncounter(run, encounterId) {
 
 function drawCards(run, amount) {
   const fight = run.fight;
+  const handStart = fight.hand.length;
   let drawn = 0;
   for (let count = 0; count < amount && fight.hand.length < MAX_HAND; count += 1) {
     if (fight.drawPile.length === 0) {
@@ -134,12 +135,17 @@ function drawCards(run, amount) {
     const card = fight.drawPile.pop();
     if (card) { fight.hand.push(card); drawn += 1; }
   }
-  if (drawn > 0) { event("logDraw", { n: drawn }); playSound("draw"); }
+  if (drawn > 0) {
+    event("logDraw", { n: drawn });
+    playSound("draw");
+    if (ui.cardFx) ui.cardFx.drawnIndices.push(...Array.from({ length: drawn }, (_, offset) => handStart + offset));
+  }
   return drawn;
 }
 
 function addGuard(run, amount) {
   run.fight.guard += amount;
+  if (ui.cardFx) ui.cardFx.guard = true;
   event("logGuard", { n: amount });
   playSound("guard");
 }
@@ -162,6 +168,11 @@ function damageEnemy(run, index, amount) {
   }
   const dealt = Math.min(enemy.hp, remainder);
   enemy.hp -= dealt;
+  if (dealt > 0 && ui.cardFx) {
+    const hit = ui.cardFx.hits.find((entry) => entry.index === index);
+    if (hit) hit.amount += dealt;
+    else ui.cardFx.hits.push({ index, amount: dealt });
+  }
   if (dealt > 0) event("logDamage", { name: enemyName(enemy), n: dealt });
   playSound("hit");
   if (enemy.hp <= 0) event("logEnemyDown", { name: enemyName(enemy) });
@@ -172,6 +183,7 @@ function triggerWake(run) {
   const fight = run.fight;
   if (fight.wakeUsed || fight.sigils.length < 3) return;
   fight.wakeUsed = true;
+  if (ui.cardFx) ui.cardFx.wake = true;
   event("logWake");
   fight.enemies.forEach((enemy, index) => { if (enemy.hp > 0) damageEnemy(run, index, 4); });
   addGuard(run, 4);
@@ -279,7 +291,53 @@ function checkVictory() {
   return true;
 }
 
-function playCard(index, targetIndex = null) {
+function animatePlayedCard(index, targetIndex, card) {
+  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+  if (state.motion || prefersReducedMotion) return Promise.resolve();
+
+  const source = app.querySelector(`.hand-card[data-card-index="${index}"]`);
+  const arena = app.querySelector(".arena");
+  const target = card.target
+    ? app.querySelector(`.foe-card[data-enemy-index="${targetIndex}"]`) || arena
+    : arena;
+  if (!source || !target || typeof source.animate !== "function") return Promise.resolve();
+
+  const from = source.getBoundingClientRect();
+  const to = target.getBoundingClientRect();
+  if (!from.width || !from.height || !to.width || !to.height) return Promise.resolve();
+  const dx = to.left + to.width / 2 - from.left - from.width / 2;
+  const dy = to.top + to.height / 2 - from.top - from.height / 2;
+  const tilt = index % 2 === 0 ? 8 : -8;
+  const ghost = source.cloneNode(true);
+  ghost.classList.remove("selected");
+  ghost.classList.add("flight-card");
+  ghost.removeAttribute("data-action");
+  ghost.removeAttribute("data-card-index");
+  ghost.removeAttribute("data-focus");
+  ghost.setAttribute("aria-hidden", "true");
+  ghost.tabIndex = -1;
+  Object.assign(ghost.style, {
+    position: "fixed", left: `${from.left}px`, top: `${from.top}px`,
+    width: `${from.width}px`, height: `${from.height}px`, margin: "0",
+    zIndex: "1000", pointerEvents: "none", transformOrigin: "center center",
+  });
+  document.body.append(ghost);
+  source.classList.add("card-launching");
+
+  const flight = ghost.animate([
+    { offset: 0, opacity: 1, transform: "translate3d(0, 0, 0) rotate(0deg) scale(1)" },
+    { offset: 0.48, opacity: 1, transform: `translate3d(${dx * 0.48}px, ${dy * 0.48 - 62}px, 0) rotateY(12deg) rotate(${tilt}deg) scale(1.12)`, easing: "cubic-bezier(.2,.7,.25,1)" },
+    { offset: 0.76, opacity: 1, transform: `translate3d(${dx * 0.82}px, ${dy * 0.82}px, 0) rotateY(-7deg) rotate(${-tilt * 0.5}deg) scale(1.04)` },
+    { offset: 1, opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(.28)` },
+  ], { duration: 470, easing: "cubic-bezier(.22,.72,.25,1)", fill: "both" });
+  return flight.finished.catch(() => {}).finally(() => {
+    source.classList.remove("card-launching");
+    ghost.remove();
+  });
+}
+
+async function playCard(index, targetIndex = null) {
+  if (ui.animating) return;
   const run = state.run;
   if (!run || state.screen !== "battle") return;
   const fight = run.fight;
@@ -309,16 +367,30 @@ function playCard(index, targetIndex = null) {
     }
   } else targetIndex = alive[0]?.enemyIndex ?? 0;
 
+  ui.pendingCard = null;
+  ui.notice = "";
+  ui.animating = true;
+  ui.cardFx = { hits: [], drawnIndices: [], wake: false, guard: false };
+  playSound("play");
+  try {
+    await animatePlayedCard(index, targetIndex, card);
+  } finally {
+    ui.animating = false;
+  }
+  if (state.run !== run || state.screen !== "battle") {
+    ui.cardFx = null;
+    return;
+  }
+
   fight.energy -= card.cost;
   fight.hand.splice(index, 1);
   applyCard(run, cardId, targetIndex);
   fight.discardPile.push(cardId);
   ui.pendingCard = null;
   ui.notice = "";
-  if (!checkVictory()) {
-    saveState();
-    render();
-  }
+  checkVictory();
+  saveState();
+  render();
 }
 
 function enemyTurn() {
@@ -461,12 +533,13 @@ function renderCard(cardId, options = {}) {
   const index = options.index;
   const disabled = options.playable && card.cost > state.run.fight.energy;
   const selected = options.selected ? "selected" : "";
+  const dealing = !options.reward && ui.cardFx?.drawnIndices.includes(index);
   const buttonAction = options.reward ? "choose-reward" : "play-card";
   const dataIndex = options.reward ? "" : `data-card-index="${index}"`;
   const dataId = options.reward ? `data-card-id="${cardId}"` : "";
   const focusId = options.reward ? `reward-${cardId}` : `hand-${index}`;
   const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}`;
-  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
+  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""} ${dealing ? "deal-in" : ""}" style="${dealing ? `--deal-order:${index}` : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
     <span class="card-topline"><span class="card-cost ${card.cost === 0 ? "free" : ""}">${card.cost}</span><span class="sigil-chip" title="${tr(sigilKey)}">${SIGIL_GLYPH[card.sigil]}</span></span>
     <span class="card-illustration" aria-hidden="true"><span>${card.glyph}</span><i></i></span>
     <span class="card-title">${escapeHtml(lang.name)}</span>
@@ -479,7 +552,7 @@ function renderHeader() {
   return `<header class="topbar">
     <button class="brand-button" type="button" data-action="home" data-focus="brand-home" aria-label="${tr("appTitle")} — ${tr("home")}">
       <span class="brand-mark" aria-hidden="true"><i></i><b></b><em></em></span>
-      <span><strong>SPINDLEWAKE</strong><small>${tr("chapter")}</small></span>
+      <span><strong>TRISEAL</strong><small>${tr("chapter")}</small></span>
     </button>
     <div class="top-controls">
       ${state.run && !state.run.result && state.screen !== "title" ? `<span class="seed-pill">${tr("seed", { seed: state.run.seed })}</span>` : ""}
@@ -524,7 +597,7 @@ function renderMetrics() {
   const incoming = getIncomingDamage();
   return `<section class="metrics-row" aria-label="${tr("turnTitle")}">
     <div class="metric metric-hull"><span class="metric-icon">♥</span><div><small>${tr("health")}</small><strong>${run.hp}<i> / ${run.maxHp}</i></strong><span class="meter"><i style="width:${Math.max(0, run.hp / run.maxHp * 100)}%"></i></span></div></div>
-    <div class="metric"><span class="metric-icon">◒</span><div><small>${tr("guard")}</small><strong>${fight.guard}</strong></div></div>
+    <div class="metric metric-guard ${ui.cardFx?.guard ? "guard-burst" : ""}"><span class="metric-icon">◒</span><div><small>${tr("guard")}</small><strong>${fight.guard}</strong></div></div>
     <div class="metric"><span class="metric-icon">✦</span><div><small>${tr("energy")}</small><strong>${fight.energy}<i> / 3</i></strong><span class="energy-pips">${[0,1,2].map((n) => `<i class="${n < fight.energy ? "filled" : ""}"></i>`).join("")}</span></div></div>
     <div class="incoming ${incoming >= 12 ? "danger" : ""}"><small>${incoming > 0 ? tr("incoming") : tr("turnTitle")}</small><strong>${incoming > 0 ? tr("damage", { n: incoming }) : "—"}</strong>${incoming >= 12 ? `<em>${tr("danger")}</em>` : ""}</div>
   </section>`;
@@ -533,7 +606,7 @@ function renderMetrics() {
 function renderWake() {
   const fight = state.run.fight;
   const ready = fight.wakeUsed;
-  return `<section class="wake-panel ${ready ? "wake-complete" : ""}" aria-label="${tr("wakeTitle")}">
+  return `<section class="wake-panel ${ready ? "wake-complete" : ""} ${ui.cardFx?.wake ? "wake-burst" : ""}" aria-label="${tr("wakeTitle")}">
     <div class="wake-heading"><div><span class="section-eyebrow">${tr("wakeProgress")}</span><h2>${tr("wakeTitle")}</h2></div><span class="wake-effect">${tr("wakeEffect")}</span></div>
     <div class="wake-rail" role="img" aria-label="${tr("wakeTitle")}: ${tr("wakeCounter", { n: fight.sigils.length })}">
       ${SIGILS.map((sigil) => `<div class="wake-socket ${fight.sigils.includes(sigil) ? `filled ${sigil}` : ""}"><span>${fight.sigils.includes(sigil) ? SIGIL_GLYPH[sigil] : "·"}</span><small>${tr(SIGIL_NAME[sigil][state.locale])}</small></div>`).join("")}
@@ -551,7 +624,8 @@ function intentMarkup(enemy) {
 }
 
 function renderEnemy(enemy, index) {
-  if (enemy.hp <= 0) return `<div class="foe-card defeated" aria-hidden="true"><span class="defeated-mark">×</span></div>`;
+  const hit = ui.cardFx?.hits.find((entry) => entry.index === index);
+  if (enemy.hp <= 0) return `<div class="foe-card defeated ${hit ? "foe-defeated-hit" : ""}" aria-hidden="true"><span class="defeated-mark">×</span>${hit ? `<span class="impact-number">−${hit.amount}</span>` : ""}</div>`;
   const pending = ui.pendingCard !== null;
   const selected = ui.selectedEnemy === index;
   const intent = currentIntent(enemy);
@@ -559,13 +633,14 @@ function renderEnemy(enemy, index) {
   const portrait = enemy.id === "horizon" ? "◎" : enemy.id === "brineback" ? "◒" : enemy.id === "mirrorfin" ? "◁" : enemy.id === "bellwether" ? "♢" : enemy.id === "inkling" ? "∿" : "◌";
   const intentKey = intent.type === "attack" ? "intentAttack" : intent.type === "brace" ? "intentBrace" : "intentCharge";
   const label = `${enemyName(enemy)}, ${enemy.hp} / ${enemy.maxHp}. ${tr("currentFoe")}: ${tr(intentKey, { n: intent.value })}`;
-  return `<button type="button" class="foe-card ${pending ? "targetable" : ""} ${selected ? "foe-selected" : ""} ${enemy.id === "horizon" ? "foe-boss" : ""}" data-action="select-foe" data-enemy-index="${index}" data-focus="foe-${index}" aria-label="${escapeHtml(label)}">
+  return `<button type="button" class="foe-card ${pending ? "targetable" : ""} ${selected ? "foe-selected" : ""} ${enemy.id === "horizon" ? "foe-boss" : ""} ${hit ? "foe-hit" : ""}" data-action="select-foe" data-enemy-index="${index}" data-focus="foe-${index}" aria-label="${escapeHtml(label)}">
     <span class="foe-art kind-${ENEMIES[enemy.id].kind}" aria-hidden="true"><i></i><b></b><em></em><strong>${portrait}</strong></span>
     <span class="foe-name-row"><strong>${escapeHtml(enemyName(enemy))}</strong><small>${tr("enemyKind")}</small></span>
     <span class="foe-health"><i style="width:${Math.max(0, enemy.hp / enemy.maxHp * 100)}%"></i></span>
     <span class="foe-stats"><span>${enemy.hp} <small>/ ${enemy.maxHp}</small></span>${guarding ? `<span class="foe-guard">◒ ${enemy.guard}</span>` : ""}</span>
     ${intentMarkup(enemy)}
     ${pending ? `<span class="target-label">${selected ? tr("targetSelected") : tr("targetFoe")}</span>` : ""}
+    ${hit ? `<span class="impact-number" aria-hidden="true">−${hit.amount}</span>` : ""}
   </button>`;
 }
 
@@ -646,7 +721,7 @@ function renderModal() {
     const sections = [
       ["01", "Wake"], ["02", "Turn"], ["03", "Reweave"], ["04", "Route"], ["05", "Keys"],
     ];
-    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card help-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">SPINDLEWAKE</span><h2 id="modal-title">${tr("helpTitle")}</h2>
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card help-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">TRISEAL</span><h2 id="modal-title">${tr("helpTitle")}</h2>
       <div class="help-grid">${sections.map(([number, id]) => `<article><span class="help-number">${number}</span><h3>${tr(`help${id}Title`)}</h3><p>${tr(`help${id}Body`)}</p></article>`).join("")}</div>
     </section></div>`;
   }
@@ -678,6 +753,7 @@ function render() {
         : state.screen === "summary" && state.run ? renderSummary()
           : renderHome();
   app.innerHTML = `${renderHeader()}${screen}${renderModal()}<div class="toast" role="status" aria-live="polite">${ui.notice}</div>`;
+  ui.cardFx = null;
   const focusTarget = ui.focusAfterRender || activeFocus;
   const focusElement = focusTarget ? app.querySelector(`[data-focus="${CSS.escape(focusTarget)}"]`) : null;
   if (focusElement) focusElement.focus({ preventScroll: true });
@@ -701,6 +777,7 @@ function closeModal() {
 }
 
 function handleAction(actionButton, clickEvent) {
+  if (ui.animating) return;
   const action = actionButton.dataset.action;
   if (action !== "toggle-sound" && action !== "toggle-music" && action !== "language") activateAudio();
   switch (action) {
@@ -789,6 +866,7 @@ function handleAction(actionButton, clickEvent) {
 }
 
 app.addEventListener("click", (clickEvent) => {
+  if (ui.animating) { clickEvent.preventDefault(); return; }
   const button = clickEvent.target.closest("[data-action]");
   if (button) handleAction(button, clickEvent);
 });
@@ -808,6 +886,7 @@ app.addEventListener("input", (inputEvent) => {
 });
 
 window.addEventListener("keydown", (keyboardEvent) => {
+  if (ui.animating) { keyboardEvent.preventDefault(); return; }
   if (keyboardEvent.key === "Escape") {
     keyboardEvent.preventDefault();
     if (ui.modal) closeModal();

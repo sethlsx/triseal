@@ -1,6 +1,6 @@
 export const TEXT = {
   en: {
-    appTitle: "The Third Current",
+    appTitle: "Triseal",
     subtitle: "Chart a living sea. Leave no thread behind.",
     homeEyebrow: "A CARD ROGUELITE BENEATH THE SURFACE",
     homeDescription: "The drowned observatory has lost its horizon. Read the currents, weave a way through, and bring a little light back to the archive.",
