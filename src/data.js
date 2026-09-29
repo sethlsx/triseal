@@ -1,6 +1,6 @@
 export const TEXT = {
   en: {
-    appTitle: "Spindlewake",
+    appTitle: "The Third Current",
     subtitle: "Chart a living sea. Leave no thread behind.",
     homeEyebrow: "A CARD ROGUELITE BENEATH THE SURFACE",
     homeDescription: "The drowned observatory has lost its horizon. Read the currents, weave a way through, and bring a little light back to the archive.",
@@ -155,7 +155,7 @@ export const TEXT = {
     wakeCounter: "{n} of 3 distinct currents",
   },
   zh: {
-    appTitle: "Spindlewake",
+    appTitle: "三印唤潮",
     subtitle: "绘出流动的海，不让任何一缕线索遗落。",
     homeEyebrow: "深海之下的卡牌肉鸽",
     homeDescription: "沉没观测站失去了海平线。读懂潮流，织出一条路，把一点光带回档案馆。",

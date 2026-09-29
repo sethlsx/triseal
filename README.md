@@ -1,8 +1,10 @@
-# Spindlewake (working title)
+# The Third Current
+
+**Simplified Chinese title: 三印唤潮**
 
 **A compact card roguelite about braiding three currents into one decisive wake.**
 
-Spindlewake is an original, browser-first prototype for players who enjoy planning a turn, shaping a run, and discovering surprising card combinations. Its central rule is called a **Wake**: play cards carrying three different sigils in one turn to create a burst of shared momentum.
+The Third Current is an original, browser-first prototype for players who enjoy planning a turn, shaping a run, and discovering surprising card combinations. Its central rule is called a **Wake**: play cards carrying three different sigils in one turn to create a burst of shared momentum.
 
 The game takes place in a drowned observatory whose charts are woven from living thread. Each expedition follows a short route through shifting sea creatures and broken instruments. Enemy intentions stay visible while you plan, and every card explains its effect in plain language.
 
@@ -36,4 +38,4 @@ English is the default. Simplified Chinese is available from the in-game languag
 - [Design brief](docs/DESIGN.md)
 - [Asset provenance](assets/PROVENANCE.md)
 
-The research note is a targeted qualitative scan of public discussions, not a representative player survey. Spindlewake is a working title and an experimental prototype, not a released commercial game.
+The research note is a targeted qualitative scan of public discussions, not a representative player survey. The Third Current is the current working title and an experimental prototype, not a released commercial game. Complete a name and trademark review before release.

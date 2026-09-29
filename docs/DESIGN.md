@@ -1,4 +1,4 @@
-# Spindlewake — design brief
+# The Third Current — design brief
 
 **Status:** working concept, first playable slice  
 **Audience:** international PC and mobile-browser players; English by default, Simplified Chinese included  
@@ -49,6 +49,6 @@ The prototype does not establish final balance, the commercial name, long-term c
 
 ## 简体中文概述
 
-Spindlewake（暂定名）是一款短局制卡牌肉鸽。玩家每回合先看见敌人的意图，再按任意顺序打出卡牌。牌面带有「潮汐、余烬、琉璃」三种印记；同一回合连齐三种印记会触发「唤潮」，造成范围伤害、获得格挡并补一张牌。重复印记不会抹掉已有进度。
+《三印唤潮》（暂定名）是一款短局制卡牌肉鸽。玩家每回合先看见敌人的意图，再按任意顺序打出卡牌。牌面带有「潮汐、余烬、琉璃」三种印记；同一回合连齐三种印记会触发「唤潮」，造成范围伤害、获得格挡并补一张牌。重复印记不会抹掉已有进度。
 
 首个可玩版本聚焦四点：核心规则一分钟内讲明白，随机事件不直接剥夺玩家操作空间，单局控制在约 15–20 分钟，并支持英语和简体中文。美术与音频从零制作，来源记录见 [素材来源](../assets/PROVENANCE.md)。
