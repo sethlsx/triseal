@@ -1,10 +1,10 @@
 {
   "schema": 1,
-  "version": "175b55b",
-  "sequence": 1790762045,
+  "version": "083916f",
+  "sequence": 1790763493,
   "minShellVersion": 1,
-  "url": "https://raw.githubusercontent.com/sethlsx/triseal/mobile-channel/updates/triseal-175b55b739685df9c95fea8e789d1c5b1e76f66d.zip",
-  "sha256": "1d0ab300f5384616fe3d82f5d68a4ff64a61b9fdc219c0e7d747e129393118bc",
-  "bytes": 2712007,
-  "createdAt": "2026-09-30T09:54:05.000Z"
+  "url": "https://raw.githubusercontent.com/sethlsx/triseal/mobile-channel/updates/triseal-083916ff283d192899433634013a8635feae9d08.zip",
+  "sha256": "bf8f8db5d5e32ef1048f33640d7955d7160740006a49fa0984d36c111a1cb420",
+  "bytes": 3106171,
+  "createdAt": "2026-09-30T10:18:13.000Z"
 }

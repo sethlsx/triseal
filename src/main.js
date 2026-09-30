@@ -1,4 +1,4 @@
-import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js";
+import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js?v=title-scene-1";
 import { activateAudio, playSound, setSoundEnabled, setMusicEnabled, setVolume, suspendAudio, resumeAudio } from "./audio.js";
 import { COMBATANT_IDS, renderCombatant } from "./combat-art.js?v=portraits-1";
 import { renderBattleScenery } from "./battle-scenery.js";
@@ -15,21 +15,29 @@ const portraitLayout = window.matchMedia("(max-width: 700px) and (orientation: p
 function loadState() {
   try {
     const save = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
-    if (save) return {
-      locale: save.locale === "zh" ? "zh" : "en",
-      sound: save.sound !== false,
-      music: save.music !== false,
-      motion: save.motion === true,
-      volume: Number.isFinite(save.volume) ? save.volume : 0.55,
-      run: save.run || null,
-      screen: save.screen || "title",
-    };
+    if (save) {
+      const run = save.run || null;
+      if (run && !run.result) {
+        const resumableScreens = ["battle", "reward", "route"];
+        run.returnScreen = resumableScreens.includes(save.screen) ? save.screen
+          : resumableScreens.includes(run.returnScreen) ? run.returnScreen : "battle";
+      }
+      return {
+        locale: save.locale === "zh" ? "zh" : "en",
+        sound: save.sound !== false,
+        music: save.music !== false,
+        motion: save.motion === true,
+        volume: Number.isFinite(save.volume) ? save.volume : 0.55,
+        run,
+        screen: "title",
+      };
+    }
   } catch { /* Start a clean chart if a save is damaged. */ }
   return { locale: "en", sound: true, music: true, motion: false, volume: 0.55, run: null, screen: "title" };
 }
 
 const state = loadState();
-const ui = { modal: null, pendingCard: null, previewCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, cardFx: null, phase: null, enemyTurn: false, activeEnemy: null, resolvedEnemies: [] };
+const ui = { modal: null, pendingCard: null, previewCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, departing: false, cardFx: null, phase: null, enemyTurn: false, activeEnemy: null, resolvedEnemies: [] };
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music);
 setVolume(state.volume);
@@ -261,10 +269,33 @@ function makeSeedFromForm() {
   return document.querySelector("[name=seed]")?.value || "";
 }
 
-function newRunFromHome() {
-  if (state.run && !state.run.result && !window.confirm(tr("overwriteConfirm"))) return;
+async function departTitle(action) {
+  if (ui.departing || ui.animating) return;
+  const showingTitle = document.body.classList.contains("title-mode");
   activateAudio();
-  startRun(makeSeedFromForm());
+  ui.departing = true;
+  ui.modal = null;
+  ui.returnFocus = null;
+  ui.focusAfterRender = null;
+  try {
+    render();
+    if (showingTitle && !motionOptions().reduced) {
+      app.classList.add("is-departing");
+      await new Promise((resolve) => window.setTimeout(resolve, 320));
+    }
+  } finally {
+    app.classList.remove("is-departing");
+    ui.departing = false;
+  }
+  action();
+}
+
+function newRunFromHome() {
+  if (state.run && !state.run.result) {
+    showModal("new-expedition");
+    return;
+  }
+  departTitle(() => startRun(""));
 }
 
 function applyCard(run, cardId, targetIndex) {
@@ -677,7 +708,7 @@ function getEncounterTitle() {
 }
 
 function sendHome() {
-  if (state.run && !state.run.result) state.run.returnScreen = state.screen;
+  if (state.run && !state.run.result && ["battle", "reward", "route"].includes(state.screen)) state.run.returnScreen = state.screen;
   state.screen = "title";
   ui.modal = null;
   ui.returnFocus = null;
@@ -687,10 +718,13 @@ function sendHome() {
 }
 
 function continueRun() {
-  state.screen = state.run?.result ? "summary" : state.run?.returnScreen || "battle";
-  activateAudio();
-  saveState();
-  render();
+  if (!state.run || state.run.result) return;
+  departTitle(() => {
+    state.screen = ["battle", "reward", "route"].includes(state.run.returnScreen) ? state.run.returnScreen : "battle";
+    ui.notice = "";
+    saveState();
+    render();
+  });
 }
 
 function renderCardImage(cardId, className = "card-art-image", lazy = false) {
@@ -739,29 +773,24 @@ function renderHeader() {
 
 function renderHome() {
   const active = state.run && !state.run.result;
-  return `<main class="home-scene">
-    <div class="sea-stars" aria-hidden="true">${Array.from({ length: 24 }, (_, index) => `<i style="--x:${(index * 37 + 8) % 100}%;--y:${(index * 53 + 11) % 100}%;--delay:${index * -0.31}s;--opacity:${0.15 + (index % 5) * 0.08}"></i>`).join("")}</div>
-    <div class="home-glow home-glow-one" aria-hidden="true"></div><div class="home-glow home-glow-two" aria-hidden="true"></div>
-    <div class="home-orbit" aria-hidden="true"><span></span><i></i><b></b><em></em></div>
-    <section class="home-copy">
-      <p class="eyebrow">${tr("homeEyebrow")}</p>
-      <h1>${tr("appTitle")}<span class="title-dot">.</span></h1>
-      <p class="home-subtitle">${tr("subtitle")}</p>
-      <p class="home-description">${tr("homeDescription")}</p>
-      <div class="welcome-note"><span class="note-glyph">⌁</span><div><strong>${tr("welcome")}</strong><p>${tr("welcomeDescription")}</p></div></div>
-      <form class="start-form" id="start-form">
-        <label for="seed-input">${tr("seedLabel")}</label>
-        <input id="seed-input" name="seed" maxlength="20" autocomplete="off" placeholder="${tr("seedPlaceholder")}" />
-        <small>${tr("seedHint")}</small>
-        <div class="home-actions">
-          ${active ? `<button class="button button-primary" type="button" data-action="continue" data-focus="continue">${tr("continueRun")} <span aria-hidden="true">→</span></button>` : ""}
-          <button class="button ${active ? "button-secondary" : "button-primary"}" type="submit" data-focus="begin">${tr("begin")} <span aria-hidden="true">↗</span></button>
-        </div>
-      </form>
-      <p class="start-hint"><span aria-hidden="true">✦</span>${tr("startHint")}</p>
+  return `<main class="title-scene">
+    <img class="title-backdrop" src="./assets/scenes/title-observatory.webp" width="1672" height="941" alt="" draggable="false" fetchpriority="high" />
+    <div class="title-atmosphere" aria-hidden="true"></div>
+    <div class="title-haze title-haze-far" aria-hidden="true"></div><div class="title-haze" aria-hidden="true"></div>
+    <div class="title-motes" aria-hidden="true">${Array.from({ length: 18 }, (_, index) => `<i style="--x:${(index * 37 + 8) % 100}%;--y:${(index * 53 + 11) % 100}%;--delay:${index * -1.31}s;--duration:${7 + index % 5}s"></i>`).join("")}</div>
+    <div class="title-topline"><span>${tr("titleChapter")}</span><button class="title-language" type="button" data-action="language" data-focus="language" aria-label="${tr("language")}">${tr("language")}</button></div>
+    <section class="title-content" aria-label="${tr("appTitle")}">
+      <svg class="title-emblem" width="92" height="48" viewBox="0 0 92 48" fill="none" aria-hidden="true"><path d="M12 25C20 10 25 40 33 25" stroke="#9cd7d9" stroke-width="1.7" stroke-linecap="round"/><path d="M46 8C49 17 55 20 52 27C50 34 41 34 40 27C38 21 44 17 46 8Z" stroke="#e5b77a" stroke-width="1.7"/><path d="m71 13 10 12-10 12-10-12 10-12Z" stroke="#c2bce2" stroke-width="1.7"/><path d="M22 40h48M36 6h20" stroke="#ddce9a" stroke-opacity=".45"/><circle cx="46" cy="40" r="2" fill="#ddce9a"/></svg>
+      <h1 class="title-logo">TRISEAL</h1>
+      <p class="title-subtitle">${tr("titleSubtitle")}</p>
+      <nav class="title-menu" aria-label="${tr("titleMenu")}">
+        ${active ? `<button class="title-menu-item is-primary" type="button" data-action="continue" data-focus="continue"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("continueRun")}</span><small class="title-save-detail">${tr("titleSaveDetail", { stage: state.run.stage, hp: state.run.hp, max: state.run.maxHp })}</small></button>` : ""}
+        <button class="title-menu-item ${active ? "" : "is-primary"}" type="button" data-action="begin" data-focus="begin"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("begin")}</span></button>
+        <button class="title-menu-item" type="button" data-action="help" data-focus="help"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("titleJournal")}</span></button>
+        <button class="title-menu-item" type="button" data-action="settings" data-focus="settings"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("settings")}</span></button>
+      </nav>
     </section>
-    <div class="home-rune" aria-hidden="true"><span>◒</span><span>✳</span><span>◇</span><i></i></div>
-    <footer class="home-footer"><span>${tr("footer")}</span><button type="button" data-action="help" data-focus="help-footer">${tr("howTo")}</button></footer>
+    <footer class="title-footer"><span>${tr("titleFooter")}</span><button class="title-seed-link" type="button" data-action="custom-seed" data-focus="custom-seed">${tr("titleSeedLink")}</button></footer>
   </main>`;
 }
 
@@ -918,6 +947,13 @@ function renderSummary() {
 function renderModal() {
   if (!ui.modal) return "";
   const modal = ui.modal;
+  if (modal === "new-expedition") {
+    const active = state.run && !state.run.result;
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card title-expedition-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" type="button" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">${tr("chapter")}</span><h2 id="modal-title">${tr("titleExpeditionTitle")}</h2><p class="title-expedition-copy">${tr("titleExpeditionBody")}</p>
+      ${active ? `<p class="title-overwrite-warning">${tr("overwriteConfirm")}</p>` : ""}
+      <form class="title-expedition-form" id="start-form"><label for="seed-input">${tr("seedLabel")}</label><input id="seed-input" name="seed" maxlength="20" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="${tr("seedPlaceholder")}" aria-describedby="title-seed-hint" /><small class="title-seed-hint" id="title-seed-hint">${tr("seedHint")}</small><div class="title-expedition-actions"><button class="button button-quiet" type="button" data-action="close-modal" data-focus="cancel-expedition">${tr("titleCancel")}</button><button class="button button-primary" type="submit" data-focus="confirm-expedition">${tr(active ? "titleReplaceRun" : "begin")}</button></div></form>
+    </section></div>`;
+  }
   if (modal === "field-guide") {
     const figures = COMBATANT_IDS.map((id) => {
       const name = id === "hero" ? tr("chartkeeper") : enemyName({ id });
@@ -972,7 +1008,7 @@ function renderModal() {
       <label class="volume-row"><span>${tr("volume")}</span><input type="range" min="0" max="1" step="0.01" value="${state.volume}" data-setting="volume" aria-label="${tr("volume")}" /></label>
       <div class="setting-row"><span><strong>${tr("reducedMotion")}</strong><small>${tr("settings")}</small></span><button type="button" class="switch ${state.motion ? "active" : ""}" data-action="toggle-motion" data-focus="toggle-motion" aria-pressed="${state.motion}"><i></i><b>${tr(state.motion ? "on" : "off")}</b></button></div>
       ${modal === "pause" ? `<button type="button" class="button button-primary modal-resume" data-action="close-modal" data-focus="resume">${tr("resume")} <span>→</span></button>` : ""}
-      ${state.run && !state.run.result ? `<button type="button" class="button button-secondary modal-leave" data-action="leave-title" data-focus="leave-title">${tr("saveAndLeave")} <span>→</span></button>` : ""}
+      ${state.run && !state.run.result && state.screen !== "title" ? `<button type="button" class="button button-secondary modal-leave" data-action="leave-title" data-focus="leave-title">${tr("saveAndLeave")} <span>→</span></button>` : ""}
     </section></div>`;
   }
   if (["deck", "draw-pile", "discard-pile"].includes(modal)) {
@@ -1000,19 +1036,22 @@ function render() {
   document.documentElement.lang = state.locale === "zh" ? "zh-Hans" : "en";
   document.body.classList.toggle("reduce-motion", state.motion);
   document.body.classList.toggle("battle-mode", state.screen === "battle" && Boolean(state.run));
+  const showingTitle = !state.run || !["battle", "reward", "route", "summary"].includes(state.screen);
+  document.body.classList.toggle("title-mode", showingTitle);
   const screen = state.screen === "battle" && state.run ? renderBattle()
     : state.screen === "reward" && state.run ? renderReward()
       : state.screen === "route" && state.run ? renderRoute()
         : state.screen === "summary" && state.run ? renderSummary()
           : renderHome();
-  app.innerHTML = `${renderHeader()}${screen}${renderModal()}<div class="toast" role="status" aria-live="polite">${ui.notice}</div>`;
+  app.innerHTML = `${showingTitle ? "" : renderHeader()}${screen}${renderModal()}<div class="toast" role="status" aria-live="polite">${ui.notice}</div>`;
+  app.setAttribute("aria-busy", String(ui.animating || ui.departing));
   const hand = app.querySelector(".hand-cards");
   if (hand) hand.scrollLeft = handScroll;
   updateOrientationAccess();
   app.querySelectorAll(":scope > .topbar, :scope > main").forEach((element) => {
     element.inert = Boolean(ui.modal);
   });
-  if (ui.animating) app.querySelectorAll("button").forEach((button) => { button.disabled = true; });
+  if (ui.animating || ui.departing) app.querySelectorAll("button").forEach((button) => { button.disabled = true; });
   const focusTarget = ui.focusAfterRender || activeFocus;
   const focusElement = focusTarget ? app.querySelector(`[data-focus="${CSS.escape(focusTarget)}"]`) : null;
   if (focusElement) focusElement.focus({ preventScroll: true });
@@ -1036,7 +1075,7 @@ function closeModal() {
 }
 
 function handleAction(actionButton, clickEvent) {
-  if (ui.animating) return;
+  if (ui.animating || ui.departing) return;
   const action = actionButton.dataset.action;
   if (action !== "toggle-sound" && action !== "toggle-music" && action !== "language") activateAudio();
   switch (action) {
@@ -1044,9 +1083,11 @@ function handleAction(actionButton, clickEvent) {
       continueRun();
       break;
     case "new-run":
-      state.run = null;
-      state.screen = "title";
+    case "begin":
       newRunFromHome();
+      break;
+    case "custom-seed":
+      showModal("new-expedition");
       break;
     case "home":
       sendHome();
@@ -1148,7 +1189,7 @@ function handleAction(actionButton, clickEvent) {
 }
 
 app.addEventListener("click", (clickEvent) => {
-  if (ui.animating) { clickEvent.preventDefault(); return; }
+  if (ui.animating || ui.departing) { clickEvent.preventDefault(); return; }
   const button = clickEvent.target.closest("[data-action]");
   if (button) handleAction(button, clickEvent);
   else if (ui.previewCard !== null && !ui.modal) {
@@ -1162,7 +1203,9 @@ app.addEventListener("click", (clickEvent) => {
 app.addEventListener("submit", (submitEvent) => {
   if (submitEvent.target.id !== "start-form") return;
   submitEvent.preventDefault();
-  newRunFromHome();
+  if (ui.animating || ui.departing || ui.modal !== "new-expedition") return;
+  const seed = makeSeedFromForm();
+  departTitle(() => startRun(seed));
 });
 
 app.addEventListener("input", (inputEvent) => {
@@ -1175,14 +1218,14 @@ app.addEventListener("input", (inputEvent) => {
 
 window.addEventListener("keydown", (keyboardEvent) => {
   if (keyboardEvent.metaKey || keyboardEvent.ctrlKey || keyboardEvent.altKey) return;
-  if (ui.animating) {
+  if (ui.animating || ui.departing) {
     if (/^[1-5er]$/i.test(keyboardEvent.key) || ["Enter", " ", "Escape", "ArrowLeft", "ArrowRight"].includes(keyboardEvent.key)) keyboardEvent.preventDefault();
     return;
   }
   if (keyboardEvent.key === "Escape") {
     keyboardEvent.preventDefault();
     if (ui.modal) closeModal();
-    else if (state.run && !state.run.result) showModal("pause");
+    else showModal(state.screen !== "title" && state.run && !state.run.result ? "pause" : "settings");
     return;
   }
   if (ui.modal) {
