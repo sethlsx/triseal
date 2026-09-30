@@ -1,8 +1,9 @@
-import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js?v=title-scene-1";
+import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js?v=clear-battle-1";
 import { activateAudio, playSound, setSoundEnabled, setMusicEnabled, setVolume, suspendAudio, resumeAudio } from "./audio.js";
 import { COMBATANT_IDS, renderCombatant } from "./combat-art.js?v=portraits-1";
-import { renderBattleScenery } from "./battle-scenery.js";
+import { renderBattleScenery } from "./battle-scenery.js?v=clear-battle-1";
 import { animateAttack, animateImpact, animateWake, animateDiscard, animateDeal } from "./combat-motion.js";
+import { TUTORIAL_TEXT, createTutorialRun, tutorialStep, tutorialAllows, advanceTutorial } from "./tutorial.js";
 
 const SAVE_KEY = "spindlewake.save.v1";
 const MAX_HAND = 10;
@@ -30,14 +31,19 @@ function loadState() {
         volume: Number.isFinite(save.volume) ? save.volume : 0.55,
         run,
         screen: "title",
+        tutorialBackup: run?.tutorial ? save.tutorialBackup || null : null,
+        tutorialCompleted: save.tutorialCompleted === true,
+        tutorialOffered: save.tutorialOffered === true || Boolean(run),
       };
     }
   } catch { /* Start a clean chart if a save is damaged. */ }
-  return { locale: "en", sound: true, music: true, motion: false, volume: 0.55, run: null, screen: "title" };
+  return { locale: "en", sound: true, music: true, motion: false, volume: 0.55, run: null, screen: "title", tutorialBackup: null, tutorialCompleted: false, tutorialOffered: false };
 }
 
 const state = loadState();
 const ui = { modal: null, pendingCard: null, previewCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, departing: false, cardFx: null, phase: null, enemyTurn: false, activeEnemy: null, resolvedEnemies: [] };
+let handGesture = null;
+let suppressedHandClick = null;
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music);
 setVolume(state.volume);
@@ -47,6 +53,7 @@ function saveState() {
     localStorage.setItem(SAVE_KEY, JSON.stringify({
       locale: state.locale, sound: state.sound, music: state.music,
       motion: state.motion, volume: state.volume, run: state.run, screen: state.screen,
+      tutorialBackup: state.tutorialBackup, tutorialCompleted: state.tutorialCompleted, tutorialOffered: state.tutorialOffered,
     }));
   } catch { /* The game remains playable if browser storage is unavailable. */ }
 }
@@ -58,7 +65,7 @@ function escapeHtml(value) {
 }
 
 function tr(key, args = {}) {
-  const template = TEXT[state.locale]?.[key] ?? TEXT.en[key] ?? key;
+  const template = TEXT[state.locale]?.[key] ?? TUTORIAL_TEXT[state.locale]?.[key] ?? TEXT.en[key] ?? TUTORIAL_TEXT.en[key] ?? key;
   return template.replace(/\{(\w+)\}/g, (_, name) => escapeHtml(args[name] ?? ""));
 }
 
@@ -291,11 +298,86 @@ async function departTitle(action) {
 }
 
 function newRunFromHome() {
+  if (state.run?.tutorial) {
+    exitTutorial();
+    return;
+  }
   if (state.run && !state.run.result) {
     showModal("new-expedition");
     return;
   }
+  if (!state.tutorialOffered && !state.tutorialCompleted) {
+    showModal("first-expedition");
+    return;
+  }
   departTitle(() => startRun(""));
+}
+
+function startTutorial() {
+  if (state.run?.tutorial) {
+    if (!state.run.result) { continueRun(); return; }
+    exitTutorial();
+  }
+  state.tutorialBackup = state.run ? JSON.parse(JSON.stringify(state.run)) : null;
+  if (state.tutorialBackup && ["battle", "reward", "route"].includes(state.screen)) state.tutorialBackup.returnScreen = state.screen;
+  state.tutorialOffered = true;
+  departTitle(() => {
+    state.run = createTutorialRun();
+    state.screen = "battle";
+    ui.pendingCard = null;
+    ui.previewCard = null;
+    ui.selectedEnemy = 0;
+    ui.notice = "";
+    saveState();
+    render();
+  });
+}
+
+function exitTutorial(resume = false) {
+  if (!state.run?.tutorial) return;
+  state.run = state.tutorialBackup;
+  state.tutorialBackup = null;
+  state.screen = "title";
+  ui.modal = null;
+  ui.pendingCard = null;
+  ui.previewCard = null;
+  ui.notice = "";
+  saveState();
+  render();
+  if (resume) {
+    if (state.run && !state.run.result) continueRun();
+    else newRunFromHome();
+  }
+}
+
+function tutorialActionAllowed(action, cardId) {
+  if (!state.run?.tutorial || tutorialAllows(state.run, action, cardId)) return true;
+  ui.notice = tr("tutorialBlocked");
+  render();
+  return false;
+}
+
+function inspectHandCard(index, live = false) {
+  const card = CARDS[state.run?.fight?.hand[index]];
+  if (!card || ui.animating || ui.modal || state.screen !== "battle") return;
+  ui.previewCard = index;
+  ui.pendingCard = card.target ? index : null;
+  ui.notice = tr(card.cost > state.run.fight.energy ? "noEnergyHint" : card.target ? "touchTargetHint" : "touchConfirmHint");
+  if (!live) { playSound("select"); render(); return; }
+  // Keep the same DOM and scroll position while a finger passes across the fan.
+  app.querySelectorAll(".hand-card").forEach((element) => {
+    const selected = Number(element.dataset.cardIndex) === index;
+    for (const name of ["selected", "inspected", "hand-peek"]) element.classList.toggle(name, selected);
+  });
+  app.querySelectorAll(".foe-card:not(.defeated)").forEach((element) => {
+    element.classList.toggle("targetable", Boolean(card.target));
+    let label = element.querySelector(".target-label");
+    if (!card.target) { label?.remove(); return; }
+    if (!label) { label = document.createElement("span"); label.className = "target-label"; element.append(label); }
+    label.textContent = tr(Number(element.dataset.enemyIndex) === ui.selectedEnemy ? "targetSelected" : "targetFoe");
+  });
+  const hint = app.querySelector(".hand-footer span");
+  if (hint) hint.textContent = ui.notice;
 }
 
 function applyCard(run, cardId, targetIndex) {
@@ -355,6 +437,10 @@ function beginReward() {
 
 function finishRun(won) {
   state.run.result = won ? "won" : "lost";
+  if (won && state.run.tutorial) {
+    advanceTutorial(state.run, "victory");
+    state.tutorialCompleted = true;
+  }
   state.screen = "summary";
   ui.modal = null;
   playSound(won ? "win" : "lose");
@@ -365,7 +451,7 @@ function checkVictory() {
   const run = state.run;
   if (!run.fight.enemies.every((enemy) => enemy.hp <= 0)) return false;
   run.fightsWon += 1;
-  if (run.stage >= 3 || run.encounterId === "boss") finishRun(true);
+  if (run.tutorial || run.stage >= 3 || run.encounterId === "boss") finishRun(true);
   else beginReward();
   return true;
 }
@@ -502,6 +588,7 @@ async function playCard(index, targetIndex = null) {
   const cardId = fight.hand[index];
   const card = CARDS[cardId];
   if (!card) return;
+  if (!tutorialActionAllowed("play-card", cardId)) return;
   if (card.cost > fight.energy) {
     ui.notice = tr("cardNotReady");
     playSound("select");
@@ -555,6 +642,7 @@ async function playCard(index, targetIndex = null) {
       await presentCardEffects(card.sigil);
       await combatBeat(240);
     }
+    advanceTutorial(run, "card-resolved", cardId);
     checkVictory();
   });
 }
@@ -621,10 +709,12 @@ async function enemyTurn() {
   showCombatPhase(tr("turnTitle"), tr("turn", { turn: fight.turn }), "tide");
   await animateDeal([...app.querySelectorAll(".hand-card")], motionOptions());
   await combatBeat(240);
+  advanceTutorial(run, "turn-resolved");
 }
 
 function endTurn() {
   if (!state.run || state.screen !== "battle" || ui.modal || ui.animating) return;
+  if (!tutorialActionAllowed("end-turn")) return;
   ui.pendingCard = null;
   ui.notice = "";
   resolveBattleAction(enemyTurn);
@@ -633,6 +723,7 @@ function endTurn() {
 async function reweave() {
   const run = state.run;
   if (!run || state.screen !== "battle" || ui.modal || ui.animating) return;
+  if (!tutorialActionAllowed("reweave")) return;
   if (!run.reweaveAvailable) {
     ui.notice = tr("reweaveUsed");
     render();
@@ -703,11 +794,13 @@ function getIncomingDamage() {
 }
 
 function getEncounterTitle() {
+  if (state.run?.tutorial) return tr("tutorialTitle");
   const encounter = ENCOUNTERS[state.run?.encounterId || "shoal"];
   return tr(encounter.title);
 }
 
 function sendHome() {
+  if (state.run?.tutorial) { exitTutorial(); return; }
   if (state.run && !state.run.result && ["battle", "reward", "route"].includes(state.screen)) state.run.returnScreen = state.screen;
   state.screen = "title";
   ui.modal = null;
@@ -742,12 +835,14 @@ function renderCard(cardId, options = {}) {
   const dataIndex = options.reward ? "" : `data-card-index="${index}"`;
   const dataId = options.reward ? `data-card-id="${cardId}"` : "";
   const focusId = options.reward ? `reward-${cardId}` : `hand-${index}`;
+  const lesson = !options.reward ? tutorialStep(state.run) : null;
+  const lessonCard = lesson?.cardId === cardId && state.run.fight.hand.indexOf(cardId) === index;
   const prismBonus = !options.reward && state.run?.fight?.prismReady && DAMAGE_CARD_TYPES.has(card.type);
   const previewText = prismBonus ? tr("prismCardPreview", { n: 3 }) : "";
   const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}${previewText ? ` ${previewText}` : ""}`;
   const handOffset = options.reward ? 0 : index - (state.run.fight.hand.length - 1) / 2;
   const fanStyle = options.reward ? "" : `style="--hand-index:${handOffset};--hand-lift:${Math.abs(handOffset) * 3}px;--hand-angle:${handOffset * 3}deg;--card-order:${index}"`;
-  return `<button class="playing-card illustrated-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" ${fanStyle} type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
+  return `<button class="playing-card illustrated-card tone-${card.tone} ${selected} ${lessonCard ? "tutorial-focus" : ""} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" ${fanStyle} type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
     <span class="card-topline"><span class="card-cost ${card.cost === 0 ? "free" : ""}">${card.cost}</span><span class="sigil-chip" title="${tr(sigilKey)}">${SIGIL_GLYPH[card.sigil]}</span></span>
     <span class="card-illustration" aria-hidden="true">${renderCardImage(cardId)}${prismBonus ? `<b class="prism-card-bonus">+3</b>` : ""}</span>
     <span class="card-title">${escapeHtml(lang.name)}</span>
@@ -784,13 +879,13 @@ function renderHome() {
       <h1 class="title-logo">TRISEAL</h1>
       <p class="title-subtitle">${tr("titleSubtitle")}</p>
       <nav class="title-menu" aria-label="${tr("titleMenu")}">
-        ${active ? `<button class="title-menu-item is-primary" type="button" data-action="continue" data-focus="continue"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("continueRun")}</span><small class="title-save-detail">${tr("titleSaveDetail", { stage: state.run.stage, hp: state.run.hp, max: state.run.maxHp })}</small></button>` : ""}
-        <button class="title-menu-item ${active ? "" : "is-primary"}" type="button" data-action="begin" data-focus="begin"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("begin")}</span></button>
+        ${active ? `<button class="title-menu-item is-primary" type="button" data-action="continue" data-focus="continue"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr(state.run.tutorial ? "continueLesson" : "continueRun")}</span><small class="title-save-detail">${state.run.tutorial ? tr("tutorialTitle") : tr("titleSaveDetail", { stage: state.run.stage, hp: state.run.hp, max: state.run.maxHp })}</small></button>` : ""}
+        <button class="title-menu-item ${active ? "" : "is-primary"}" type="button" data-action="begin" data-focus="begin"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr(state.run?.tutorial ? "tutorialExit" : "begin")}</span></button>
         <button class="title-menu-item" type="button" data-action="help" data-focus="help"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("titleJournal")}</span></button>
         <button class="title-menu-item" type="button" data-action="settings" data-focus="settings"><span class="title-menu-mark" aria-hidden="true">◇</span><span class="title-menu-label">${tr("settings")}</span></button>
       </nav>
     </section>
-    <footer class="title-footer"><span>${tr("titleFooter")}</span><button class="title-seed-link" type="button" data-action="custom-seed" data-focus="custom-seed">${tr("titleSeedLink")}</button></footer>
+    <footer class="title-footer"><span>${tr("titleFooter")}</span><button class="title-tutorial-link" type="button" data-action="tutorial-start" data-focus="tutorial-start">${tr("trainingBattle")}</button><button class="title-seed-link" type="button" data-action="custom-seed" data-focus="custom-seed">${tr("titleSeedLink")}</button></footer>
   </main>`;
 }
 
@@ -830,7 +925,7 @@ function intentMarkup(enemy) {
   const intent = currentIntent(enemy);
   const key = intent.type === "attack" ? "intentAttack" : intent.type === "brace" ? "intentBrace" : "intentCharge";
   const icon = intent.type === "attack" ? "↗" : intent.type === "brace" ? "◒" : "↑";
-  return `<span class="intent intent-${intent.type}"><span aria-hidden="true">${icon}</span>${tr(key, { n: intent.value })}</span>`;
+  return `<span class="intent intent-${intent.type} ${tutorialStep(state.run)?.focus === "intent" ? "tutorial-focus" : ""}"><span aria-hidden="true">${icon}</span>${tr(key, { n: intent.value })}</span>`;
 }
 
 function renderEnemy(enemy, index) {
@@ -858,7 +953,7 @@ function renderHero() {
     <div class="hero-figure" data-combatant="hero" aria-hidden="true">${renderCombatant("hero")}<span class="hero-shield"></span></div>
     <div class="hero-caption">${tr("chartkeeper")}</div>
     <div class="hero-health" aria-label="${tr("hullFull", { current: run.hp, max: run.maxHp })}"><i style="width:${run.hp / run.maxHp * 100}%"></i></div>
-    <div class="hero-stats"><span>♥ ${run.hp} <small>/ ${run.maxHp}</small></span>${run.fight.guard > 0 ? `<span class="hero-guard">◒ ${run.fight.guard}</span>` : ""}</div>
+    <button class="hero-stats resource-info" type="button" data-action="resources" data-focus="hero-resources" aria-label="${tr("hullFull", { current: run.hp, max: run.maxHp })}. ${tr("guard")} ${run.fight.guard}. ${tr("resources")}"><span class="hero-health-value"><small>${tr("health")}</small><b>${run.hp}<small>/${run.maxHp}</small></b></span><span class="hero-guard"><small>${tr("guard")}</small><b>${run.fight.guard}</b></span></button>
   </div>`;
 }
 
@@ -872,9 +967,15 @@ function renderSigilCompass() {
   const resonanceKey = fight.resonance ? `resonance${fight.resonance[0].toUpperCase()}${fight.resonance.slice(1)}Title` : "shapeResonance";
   const caption = fight.wakeUsed ? tr("wakeReady") : tr(resonanceKey);
   return `<button type="button" class="sigil-compass ${fight.wakeUsed ? "compass-complete" : ""} ${ui.cardFx?.resonance ? "resonance-burst" : ""}" data-action="sigils" data-focus="sigils" aria-label="${tr("sigilDetails")}: ${tr("wakeCounter", { n: fight.sigils.length })}" title="${tr("sigilDetails")}">
-    <span class="sigil-orbit" aria-hidden="true">${SIGILS.map((sigil) => `<span class="sigil-node tone-${sigil} ${fight.sigils.includes(sigil) ? "filled" : ""}">${SIGIL_GLYPH[sigil]}</span>`).join("")}</span>
-    <span class="compass-caption">${caption}<i aria-hidden="true"> ⓘ</i></span>
+    <span class="sigil-orbit" aria-hidden="true">${SIGILS.map((sigil) => `<span class="sigil-node tone-${sigil} ${fight.sigils.includes(sigil) ? "filled" : ""}"><span>${SIGIL_GLYPH[sigil]}</span><small class="sigil-label">${tr(SIGIL_NAME[sigil][state.locale])}</small></span>`).join("")}</span>
+    <span class="compass-caption">${tr("sigilCount", { n: fight.sigils.length })}<i aria-hidden="true"> ⓘ</i></span><small class="compass-reaction">${fight.resonance || fight.wakeUsed ? caption : ""}</small>
   </button>`;
+}
+
+function renderTutorialCoach() {
+  const step = tutorialStep(state.run);
+  if (!step) return "";
+  return `<aside class="tutorial-coach" aria-label="${tr("trainingBattle")}" aria-live="polite"><div class="tutorial-kicker"><span>${tr("tutorialKicker")}</span><span>${tr("tutorialProgress", { step: step.index + 1, total: step.total })}</span></div><h2>${tr(step.keytitle)}</h2><p>${tr(step.keybody)}</p><div class="tutorial-progress" aria-hidden="true">${Array.from({ length: step.total }, (_, i) => `<i class="${i <= step.index ? "complete" : ""}"></i>`).join("")}</div><div class="tutorial-actions">${step.canAdvance ? `<button type="button" class="tutorial-next" data-action="tutorial-next" data-focus="tutorial-next">${tr("tutorialNext")} →</button>` : ""}<button type="button" data-action="tutorial-exit" data-focus="tutorial-exit">${tr("tutorialExit")}</button></div></aside>`;
 }
 
 function renderBattle() {
@@ -885,31 +986,30 @@ function renderBattle() {
   const handCards = fight.hand.map((id, index) => renderCard(id, {
     index, playable: true, selected: ui.previewCard === index || (targeting && ui.pendingCard === index),
   })).join("");
-  const notice = ui.notice || (ui.animating ? tr("resolving") : targeting ? tr("targetHint") : tr(window.matchMedia("(pointer: coarse)").matches ? "touchCardHint" : "clickCardHint"));
+  const notice = ui.notice || (ui.animating ? tr("resolving") : targeting ? tr("targetHint") : tr(window.matchMedia("(pointer: coarse)").matches ? "inspectHandHint" : "inspectMouseHint"));
   const latest = run.log.at(-1);
-  const inspectedId = ui.previewCard !== null ? fight.hand[ui.previewCard] : null;
-  const inspected = inspectedId ? CARDS[inspectedId] : null;
-  return `<main class="game-scene battle-scene landscape-battle ${ui.animating ? "combat-resolving" : ""}">
+  const lesson = tutorialStep(run);
+  return `<main class="game-scene battle-scene landscape-battle ${lesson ? "tutorial-battle" : ""} ${ui.animating ? "combat-resolving" : ""}" ${lesson ? `data-tutorial-step="${lesson.id}"` : ""}>
     ${renderBattleScenery(run.encounterId)}
-    <div class="battle-location"><small>${tr("step", { n: run.stage })}</small><h1>${getEncounterTitle()}</h1></div>
+    <div class="battle-location"><small>${lesson ? tr("trainingBattle") : tr("step", { n: run.stage })}</small><h1>${getEncounterTitle()}</h1></div>
     <div class="battle-turn"><strong>${tr("turn", { turn: fight.turn })}</strong><span class="${incoming >= 12 ? "danger" : ""}">${incoming ? `${tr("incoming")} · ${incoming}` : tr(ui.enemyTurn ? "enemyTurn" : "turnTitle")}</span></div>
     ${renderSigilCompass()}
     <section class="arena combat-stage ${run.encounterId === "boss" ? "arena-boss" : ""}" aria-label="${tr("battlefield")}">
       ${ui.phase ? `<div class="combat-banner tone-${ui.phase.tone}" role="status"><strong>${ui.phase.title}</strong><small>${ui.phase.detail}</small></div>` : ""}
       ${renderHero()}<div class="foe-row">${fight.enemies.map(renderEnemy).join("")}</div>
     </section>
-    <div class="energy-orb" aria-label="${tr("energy")}: ${fight.energy} / 3"><strong>${fight.energy}<small>/3</small></strong><span>${tr("energy")}</span></div>
+    <button class="energy-orb resource-info" type="button" data-action="resources" data-focus="energy-resources" aria-label="${tr("energy")}: ${fight.energy} / 3. ${tr("resourceEnergy")}"><strong>${fight.energy}<small>/3</small></strong><span>${tr("energy")}</span><small class="resource-hint">${tr("energyPerTurn")}</small></button>
     <button class="pile-button draw-pile" type="button" data-action="draw-pile" data-focus="draw-pile" aria-label="${tr("drawPile")}: ${fight.drawPile.length}"><span class="pile-symbol" aria-hidden="true">▱</span><b>${fight.drawPile.length}</b><small>${tr("drawPile")}</small></button>
     <section class="hand-zone ${fight.hand.length > 7 ? "hand-overflow" : ""} ${fight.hand.length > 5 ? "hand-many" : ""}" aria-label="${tr("hand")}" style="--hand-count:${fight.hand.length}">
       <div class="hand-cards">${handCards || `<div class="empty-hand">${tr(ui.enemyTurn ? "enemiesActing" : "noCards")}</div>`}</div>
       <div class="hand-footer"><span>${notice}</span></div>
     </section>
-    ${inspected ? `<aside class="card-readout illustrated-readout tone-${inspected.sigil}" aria-live="polite">${renderCardImage(inspectedId, "readout-art")}<div class="readout-copy"><strong>${escapeHtml(inspected[state.locale].name)}</strong><span>${escapeHtml(inspected[state.locale].text)}</span><small>${tr(inspected.target ? "touchTargetHint" : "touchConfirmHint")}</small></div></aside>` : ""}
     <button class="pile-button discard-pile" type="button" data-action="discard-pile" data-focus="discard-pile" aria-label="${tr("discardPile")}: ${fight.discardPile.length}"><span class="pile-symbol" aria-hidden="true">▱</span><b>${fight.discardPile.length}</b><small>${tr("discardPile")}</small></button>
-    <div class="battle-actions"><button type="button" class="end-turn" data-action="end-turn" data-focus="end-turn"><span>${tr(ui.animating ? "resolving" : "endTurn")}</span><i aria-hidden="true">${ui.animating ? "···" : "↠"}</i></button>
-      <button type="button" class="reweave-button" data-action="reweave" data-focus="reweave" aria-label="${tr("reweaveAvailable")}" ${run.reweaveAvailable && fight.hand.length > 0 ? "" : "disabled"}><span aria-hidden="true">⤨</span>${run.reweaveAvailable ? tr("reweave") : tr("reweaveUsed")}</button>
+    <div class="battle-actions"><button type="button" class="end-turn ${lesson?.focus === "end-turn" ? "tutorial-focus" : ""}" data-action="end-turn" data-focus="end-turn" ${tutorialAllows(run, "end-turn") ? "" : "disabled"}><span>${tr(ui.animating ? "resolving" : "endTurn")}</span><i aria-hidden="true">${ui.animating ? "···" : "↠"}</i></button>
+      <button type="button" class="reweave-button" data-action="reweave" data-focus="reweave" aria-label="${tr("reweaveAvailable")}" ${run.reweaveAvailable && fight.hand.length > 0 && tutorialAllows(run, "reweave") ? "" : "disabled"}><span aria-hidden="true">⤨</span>${run.reweaveAvailable ? tr("reweave") : tr("reweaveUsed")}</button>
     </div>
     <button class="battle-journal" type="button" data-action="battle-log" data-focus="battle-log" aria-label="${tr("battleLog")}"><span aria-hidden="true">≋</span>${latest ? tr(latest.key, latest.args) : tr("battleLog")}</button>
+    ${renderTutorialCoach()}
     <aside class="orientation-hint" role="note"><span class="rotate-device" aria-hidden="true">↻</span><h2>${tr("rotateTitle")}</h2><p>${tr("rotateDescription")}</p><button type="button" data-action="home" class="button button-quiet">${tr("home")}</button></aside>
   </main>`;
 }
@@ -937,6 +1037,9 @@ function renderRoute() {
 function renderSummary() {
   const run = state.run;
   const won = run.result === "won";
+  if (run.tutorial) {
+    return `<main class="summary-scene tutorial-summary"><section class="summary-card"><span class="section-eyebrow">${tr("trainingBattle")}</span><div class="summary-sigil">${won ? "◉" : "≈"}</div><h1>${tr(won ? "tutorialVictoryTitle" : "runLost")}</h1><p>${tr(won ? "tutorialVictoryBody" : "runLostBody")}</p><p>${state.tutorialBackup ? tr("lessonSaved") : ""}</p><div class="summary-actions"><button type="button" class="button button-primary" data-action="tutorial-complete" data-focus="lesson-complete">${tr(state.tutorialBackup && !state.tutorialBackup.result ? "lessonReturn" : "lessonStart")}</button><button type="button" class="button button-quiet" data-action="tutorial-exit" data-focus="lesson-home">${tr("home")}</button>${won ? "" : `<button type="button" class="button button-quiet" data-action="tutorial-retry" data-focus="lesson-retry">${tr("lessonRetry")}</button>`}</div></section></main>`;
+  }
   return `<main class="summary-scene ${won ? "summary-win" : "summary-loss"}"><div class="summary-orbit" aria-hidden="true"><i></i><b></b><em></em></div>
     <section class="summary-card"><span class="section-eyebrow">${tr("chapter")}</span><div class="summary-sigil">${won ? "◉" : "×"}</div><h1>${tr(won ? "runWon" : "runLost")}</h1><p>${tr(won ? "runWonBody" : "runLostBody")}</p>
       <div class="summary-stats"><span><small>${tr("turnsTaken")}</small><b>${run.totalTurns}</b></span><span><small>${tr("cardsInDeck")}</small><b>${run.cardsAdded}</b></span><span><small>${tr("bestSeed")}</small><b>${escapeHtml(run.seed)}</b></span></div>
@@ -947,6 +1050,13 @@ function renderSummary() {
 function renderModal() {
   if (!ui.modal) return "";
   const modal = ui.modal;
+  if (modal === "first-expedition") {
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card title-expedition-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" type="button" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">${tr("trainingBattle")}</span><h2 id="modal-title">${tr("firstVoyageTitle")}</h2><p class="title-expedition-copy">${tr("firstVoyageBody")}</p><div class="title-expedition-actions"><button class="button button-primary" type="button" data-action="tutorial-start" data-focus="first-tutorial">${tr("trainingBattle")}</button><button class="button button-quiet" type="button" data-action="skip-tutorial" data-focus="skip-tutorial">${tr("skipLesson")}</button></div></section></div>`;
+  }
+  if (modal === "resources") {
+    const resources = [["◈", "energy", "resourceEnergy"], ["♥", "health", "resourceHealth"], ["◒", "guard", "resourceBlock"], ["↗", "intentLabel", "resourceIntent"], ["◇", "sigilsLabel", "resourceSigils"], ["▱", "pilesLabel", "resourcePiles"], ["⤨", "reweave", "resourceReweave"]];
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card resources-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" type="button" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><h2 id="modal-title">${tr("resourceTitle")}</h2><p class="gallery-intro">${tr("resourceIntro")}</p><div class="resource-guide">${resources.map(([icon, title, body]) => `<article><span class="resource-guide-icon" aria-hidden="true">${icon}</span><div><h3>${tr(title)}</h3><p>${tr(body)}</p></div></article>`).join("")}</div><button class="button button-quiet gallery-back" type="button" data-action="help" data-focus="resource-help">${tr("howTo")}</button></section></div>`;
+  }
   if (modal === "new-expedition") {
     const active = state.run && !state.run.result;
     return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card title-expedition-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" type="button" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">${tr("chapter")}</span><h2 id="modal-title">${tr("titleExpeditionTitle")}</h2><p class="title-expedition-copy">${tr("titleExpeditionBody")}</p>
@@ -996,6 +1106,8 @@ function renderModal() {
       ["01", "Wake"], ["02", "Turn"], ["03", "Reweave"], ["04", "Route"], ["05", "Keys"],
     ];
     return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card help-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">TRISEAL</span><h2 id="modal-title">${tr("helpTitle")}</h2>
+      <button type="button" class="gallery-link" data-action="resources" data-focus="resources"><span><strong>${tr("resourceTitle")}</strong><small>${tr("resourceIntro")}</small></span><b aria-hidden="true">→</b></button>
+      ${state.run?.tutorial ? "" : `<button type="button" class="gallery-link" data-action="tutorial-start" data-focus="help-tutorial"><span><strong>${tr("trainingBattle")}</strong><small>${tr("firstVoyageBody")}</small></span><b aria-hidden="true">→</b></button>`}
       <button type="button" class="gallery-link" data-action="card-gallery" data-focus="card-gallery"><span class="gallery-link-art" aria-hidden="true">${["needle", "brace", "glassline"].map((id) => renderCardImage(id)).join("")}</span><span><strong>${tr("cardGallery")}</strong><small>${tr("cardGalleryDescription")}</small></span><b aria-hidden="true">→</b></button>
       <button type="button" class="gallery-link" data-action="field-guide" data-focus="field-guide"><span class="field-guide-link-art" aria-hidden="true">${["hero", "driftling"].map((id) => renderCombatant(id, { idle: false, eager: false })).join("")}</span><span><strong>${tr("fieldGuide")}</strong><small>${tr("fieldGuideDescription")}</small></span><b aria-hidden="true">→</b></button>
       <div class="help-grid">${sections.map(([number, id]) => `<article><span class="help-number">${number}</span><h3>${tr(`help${id}Title`)}</h3><p>${tr(`help${id}Body`)}</p></article>`).join("")}</div>
@@ -1008,7 +1120,7 @@ function renderModal() {
       <label class="volume-row"><span>${tr("volume")}</span><input type="range" min="0" max="1" step="0.01" value="${state.volume}" data-setting="volume" aria-label="${tr("volume")}" /></label>
       <div class="setting-row"><span><strong>${tr("reducedMotion")}</strong><small>${tr("settings")}</small></span><button type="button" class="switch ${state.motion ? "active" : ""}" data-action="toggle-motion" data-focus="toggle-motion" aria-pressed="${state.motion}"><i></i><b>${tr(state.motion ? "on" : "off")}</b></button></div>
       ${modal === "pause" ? `<button type="button" class="button button-primary modal-resume" data-action="close-modal" data-focus="resume">${tr("resume")} <span>→</span></button>` : ""}
-      ${state.run && !state.run.result && state.screen !== "title" ? `<button type="button" class="button button-secondary modal-leave" data-action="leave-title" data-focus="leave-title">${tr("saveAndLeave")} <span>→</span></button>` : ""}
+      ${state.run && !state.run.result && state.screen !== "title" ? `<button type="button" class="button button-secondary modal-leave" data-action="leave-title" data-focus="leave-title">${tr(state.run.tutorial ? "tutorialExit" : "saveAndLeave")} <span>→</span></button>` : ""}
     </section></div>`;
   }
   if (["deck", "draw-pile", "discard-pile"].includes(modal)) {
@@ -1079,6 +1191,26 @@ function handleAction(actionButton, clickEvent) {
   const action = actionButton.dataset.action;
   if (action !== "toggle-sound" && action !== "toggle-music" && action !== "language") activateAudio();
   switch (action) {
+    case "tutorial-start":
+      startTutorial();
+      break;
+    case "tutorial-next":
+      if (advanceTutorial(state.run, "next")) { ui.notice = ""; saveState(); render(); }
+      break;
+    case "tutorial-exit":
+      exitTutorial();
+      break;
+    case "tutorial-complete":
+      exitTutorial(true);
+      break;
+    case "tutorial-retry":
+      exitTutorial();
+      startTutorial();
+      break;
+    case "skip-tutorial":
+      state.tutorialOffered = true;
+      departTitle(() => startRun(""));
+      break;
     case "continue":
       continueRun();
       break;
@@ -1087,6 +1219,7 @@ function handleAction(actionButton, clickEvent) {
       newRunFromHome();
       break;
     case "custom-seed":
+      if (state.run?.tutorial) exitTutorial();
       showModal("new-expedition");
       break;
     case "home":
@@ -1100,6 +1233,7 @@ function handleAction(actionButton, clickEvent) {
     case "help":
     case "card-gallery":
     case "field-guide":
+    case "resources":
       showModal(action);
       break;
     case "character-detail":
@@ -1151,14 +1285,10 @@ function handleAction(actionButton, clickEvent) {
     case "play-card":
       { const index = Number(actionButton.dataset.cardIndex);
         const card = CARDS[state.run?.fight.hand[index]];
-        const touch = clickEvent.pointerType === "touch" || (clickEvent.detail > 0 && window.matchMedia("(pointer: coarse)").matches);
-        if (touch && card && card.cost <= state.run.fight.energy) {
+        const touch = ["touch", "pen"].includes(clickEvent.pointerType) || (clickEvent.detail > 0 && window.matchMedia("(pointer: coarse)").matches);
+        if (touch && card) {
           if (ui.previewCard !== index) {
-            ui.previewCard = index;
-            ui.pendingCard = card.target ? index : null;
-            ui.notice = tr(card.target ? "touchTargetHint" : "touchConfirmHint");
-            playSound("select");
-            render();
+            inspectHandCard(index);
           } else playCard(index, card.target ? ui.selectedEnemy : null);
         } else playCard(index);
       }
@@ -1188,7 +1318,49 @@ function handleAction(actionButton, clickEvent) {
   }
 }
 
+app.addEventListener("pointerdown", (pointerEvent) => {
+  if (!["touch", "pen"].includes(pointerEvent.pointerType) || ui.animating || ui.departing || ui.modal) return;
+  const card = pointerEvent.target.closest(".hand-card");
+  if (!card || state.screen !== "battle") return;
+  handGesture = { id: pointerEvent.pointerId, x: pointerEvent.clientX, y: pointerEvent.clientY, moved: false, overflow: Boolean(card.closest(".hand-overflow")) };
+});
+
+window.addEventListener("pointermove", (pointerEvent) => {
+  if (!handGesture || pointerEvent.pointerId !== handGesture.id || ui.animating || ui.modal) return;
+  if (Math.hypot(pointerEvent.clientX - handGesture.x, pointerEvent.clientY - handGesture.y) < 9 && !handGesture.moved) return;
+  handGesture.moved = true;
+  // Large hands keep their native horizontal scrolling. Tapping still inspects.
+  if (handGesture.overflow) return;
+  if (pointerEvent.cancelable) pointerEvent.preventDefault();
+  const cards = [...app.querySelectorAll(".hand-card")];
+  if (!cards.length) return;
+  const bounds = cards.map((card) => ({ card, rect: card.getBoundingClientRect() }));
+  const left = Math.min(...bounds.map(({ rect }) => rect.left));
+  const right = Math.max(...bounds.map(({ rect }) => rect.right));
+  const top = Math.min(...bounds.map(({ rect }) => rect.top));
+  if (pointerEvent.clientX < left - 15 || pointerEvent.clientX > right + 15 || pointerEvent.clientY < top - 20) return;
+  const nearest = bounds.reduce((best, item) => Math.abs(item.rect.left + item.rect.width / 2 - pointerEvent.clientX) < Math.abs(best.rect.left + best.rect.width / 2 - pointerEvent.clientX) ? item : best);
+  const index = Number(nearest.card.dataset.cardIndex);
+  app.querySelector(".hand-zone")?.classList.add("hand-browsing");
+  if (ui.previewCard !== index) inspectHandCard(index, true);
+}, { passive: false });
+
+function finishHandGesture(pointerEvent) {
+  if (!handGesture || pointerEvent.pointerId !== handGesture.id) return;
+  if (handGesture.moved) suppressedHandClick = { id: handGesture.id, until: performance.now() + 300 };
+  handGesture = null;
+  app.querySelector(".hand-zone")?.classList.remove("hand-browsing");
+}
+window.addEventListener("pointerup", finishHandGesture);
+window.addEventListener("pointercancel", finishHandGesture);
+
 app.addEventListener("click", (clickEvent) => {
+  if (suppressedHandClick && performance.now() < suppressedHandClick.until && clickEvent.detail > 0
+    && (clickEvent.pointerId === suppressedHandClick.id || !("pointerId" in clickEvent))) {
+    suppressedHandClick = null;
+    clickEvent.preventDefault();
+    return;
+  }
   if (ui.animating || ui.departing) { clickEvent.preventDefault(); return; }
   const button = clickEvent.target.closest("[data-action]");
   if (button) handleAction(button, clickEvent);

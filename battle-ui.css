@@ -1,0 +1,318 @@
+/* Battle readability: a quiet field, legible resources, and a hand below the rail. */
+.landscape-battle {
+  --card-width: 144px;
+  --card-height: 206px;
+  --hand-hidden: 104px;
+  --hand-reveal: calc(var(--hand-hidden) + 22px);
+  --battle-ink: #eef1de;
+  --battle-muted: #c0d0c5;
+  -webkit-tap-highlight-color: transparent;
+}
+.landscape-battle::after {
+  background: none;
+}
+body.battle-mode .topbar { height: 48px; }
+body.battle-mode .brand-button strong { font-size: 11px; }
+body.battle-mode .quiet-control { font-size: 12px; }
+.battle-location { top: 64px; }
+.battle-location small { color: #bed2c9; font-size: 11px; letter-spacing: .1em; }
+.battle-location h1 { margin-top: 5px; font-size: clamp(20px, 2.1vw, 28px); }
+.battle-turn { top: 65px; gap: 6px; }
+.battle-turn strong { font-size: 18px; }
+.battle-turn > span { color: #f2cfaa; font-size: 12px; line-height: 1.3; }
+.battle-turn > span.danger { color: #ffd1b6; }
+
+/* Labels sit beside their values; each resource opens its explanation. */
+.sigil-compass { top: 36px; width: 244px; padding: 8px 12px 6px; }
+.sigil-orbit { gap: 18px; align-items: start; padding-bottom: 19px; }
+.sigil-orbit::before { opacity: .5; }
+.sigil-orbit::after { display: none; }
+.sigil-node { position: relative; width: 34px; height: 34px; font-size: 21px; color: #acbab7; background: #102930c7; border-color: #bad2c056; }
+.sigil-node:nth-child(2) { margin-top: 0; }
+.sigil-node .sigil-label { position: absolute; left: 50%; bottom: -17px; transform: translateX(-50%); font: 500 11px/1.2 system-ui, sans-serif; white-space: nowrap; color: #c3d1c7; }
+.sigil-node.filled .sigil-label { color: var(--sigil-color); }
+.compass-caption { margin-top: 6px; font-size: 12px; line-height: 1.25; letter-spacing: 0; color: #e0e8d6; }
+.compass-caption i { font-size: 12px; }
+.compass-reaction { display: block; min-height: 14px; margin-top: 3px; color: #c5d4bf; font-size: 11px; line-height: 1.2; }
+.sigil-compass:focus-visible, .resource-info:focus-visible { outline: 2px solid #e0e8b2; outline-offset: 4px; }
+.energy-orb { left: max(4.7%, calc(env(safe-area-inset-left) + 16px)); bottom: max(41px, calc(env(safe-area-inset-bottom) + 25px)); width: 83px; height: 83px; padding: 4px; color: #e3eed7; cursor: pointer; }
+.energy-orb strong { font-size: 33px; line-height: 1; }
+.energy-orb strong small { font-size: 15px; }
+.energy-orb > span { margin-top: 3px; color: #e1ecd9; font-size: 12px; letter-spacing: 0; }
+.energy-orb .resource-hint { margin-top: 3px; color: #c9d6be; font-size: 10px; line-height: 1.1; white-space: nowrap; }
+.energy-orb::before { border-color: #afcea337; }
+
+/* The fighters now keep most of the height previously occupied by the hand. */
+.landscape-battle .arena.combat-stage { inset: 135px 7% 135px; }
+.landscape-battle .hero-slot { left: 2%; width: 25%; }
+.landscape-battle .hero-figure { width: clamp(175px, 21vw, 285px); height: clamp(180px, 33dvh, 305px); }
+.landscape-battle .hero-caption { font-size: 16px; line-height: 1.25; color: var(--battle-ink); }
+.landscape-battle .hero-health { width: 148px; max-width: 100%; height: 6px; margin-top: 8px; background: #03141dcf; }
+.landscape-battle .hero-stats { display: flex; align-items: start; justify-content: center; gap: 14px; width: max-content; max-width: 115%; min-height: 35px; margin-top: 6px; padding: 0 4px; border: 0; border-radius: 0; background: none; color: #ffe0c4; font-size: 13px; line-height: 1.15; cursor: pointer; }
+.landscape-battle .hero-health-value { white-space: nowrap; }
+.landscape-battle .hero-stats > span { display: grid; justify-items: center; gap: 2px; }
+.landscape-battle .hero-stats small { display: block; font-size: 11px; color: #d0d7c7; }
+.landscape-battle .hero-stats b { font-size: 13px; font-weight: 600; }
+.landscape-battle .hero-stats b small { display: inline; }
+.landscape-battle .hero-guard { color: #bceee0; font-size: 12px; }
+.landscape-battle .combat-stage .foe-row { left: 46%; right: -1%; gap: clamp(16px, 3.5vw, 62px); }
+.landscape-battle .combat-stage .foe-card { flex-basis: 205px; width: 205px; padding-top: 38px; }
+.landscape-battle .combat-stage .foe-card:nth-child(even) { margin-bottom: 0; }
+.landscape-battle .combat-stage .foe-art { height: clamp(175px, 30dvh, 268px); flex-basis: clamp(175px, 30dvh, 268px); }
+.landscape-battle .combat-stage .foe-name-row strong { font-size: 16px; line-height: 1.25; color: var(--battle-ink); }
+.landscape-battle .combat-stage .foe-health { width: 84%; max-width: 150px; height: 6px; flex-basis: 6px; margin-top: 8px; background: #041820d9; }
+.landscape-battle .combat-stage .foe-stats { width: 84%; max-width: 150px; font-size: 13px; line-height: 1.3; color: #f8dbc0; }
+.landscape-battle .combat-stage .foe-stats small { font-size: 11px; color: #d0d8c8; }
+.landscape-battle .combat-stage .intent { top: 0; min-height: 31px; padding: 5px 11px; gap: 6px; border: 1px solid #e4c59d28; border-radius: 18px; font-size: 13px; line-height: 1.2; background: #132730e6; color: #ffd7b9; box-shadow: 0 3px 12px #00101b2b; }
+.landscape-battle .combat-stage .intent > span { font-size: 17px; }
+.landscape-battle .combat-stage .intent-brace { color: #c2f3e4; }
+.landscape-battle .combat-stage .intent-charge { color: #e2d5ff; }
+.landscape-battle .combat-stage .foe-card.foe-boss { flex-basis: 290px; width: 290px; }
+.landscape-battle .combat-stage .foe-boss .foe-art { height: clamp(205px, 35dvh, 315px); flex-basis: clamp(205px, 35dvh, 315px); }
+.landscape-battle .combat-stage .target-label { bottom: -24px; font-size: 11px; padding: 5px 8px; }
+.landscape-battle .combat-banner { top: 8%; left: 42%; }
+.landscape-battle .combat-banner strong { font-size: 18px; }
+.landscape-battle .combat-banner small { font-size: 12px; }
+
+/* The tall transparent scroll area leaves room above every raised card. */
+.landscape-battle .hand-zone { z-index: 12; bottom: calc(-1 * var(--hand-hidden)); width: min(70%, 1060px); height: calc(var(--card-height) + 148px); pointer-events: none; }
+.landscape-battle .hand-zone .hand-cards { height: 100%; min-height: 0; padding: 140px 18px 8px; align-items: flex-end; justify-content: center; overflow: visible; pointer-events: none; }
+.landscape-battle .hand-zone .hand-cards .hand-card,
+.landscape-battle .hand-zone .hand-cards .hand-card:hover {
+  z-index: calc(10 + var(--card-order));
+  width: var(--card-width);
+  height: var(--card-height);
+  flex: 0 0 var(--card-width);
+  padding: 0 0 8px;
+  border: 1px solid #d5dec4c7;
+  border-radius: 9px;
+  opacity: 1;
+  transform: translateY(calc(var(--hand-lift, 0px) * .55)) rotate(calc(var(--hand-angle, 0deg) * .6));
+  transform-origin: 50% 100%;
+  box-shadow: 0 3px 12px #04101d99;
+  transition: transform .3s cubic-bezier(.2, .78, .25, 1.15), box-shadow .25s, border-color .2s, filter .2s;
+  touch-action: none;
+  pointer-events: auto;
+}
+.landscape-battle .hand-zone .hand-card + .hand-card { margin-left: -19px; }
+.landscape-battle .hand-many:not(.hand-overflow) .hand-card + .hand-card { margin-left: -34px; }
+.landscape-battle .hand-zone .hand-cards .hand-card.unavailable { opacity: .8; filter: saturate(.5); }
+.landscape-battle .hand-zone .hand-cards .hand-card.card-launching { opacity: .16; }
+.landscape-battle .hand-zone .hand-cards .hand-card:is(.selected, .inspected, .hand-peek, :focus-visible) {
+  z-index: 70;
+  transform: translateY(calc(-1 * var(--hand-reveal))) rotate(0deg) scale(1.06);
+  border-color: #f2edc2;
+  box-shadow: 0 17px 31px #03121bc2, 0 0 0 2px #e0e9bf98, 0 0 21px #b8deae2b;
+  opacity: 1;
+}
+.landscape-battle .hand-zone.hand-browsing .hand-card { transition-duration: .18s; }
+/* Keep the body-level flight and discard clones visually identical to the hand. */
+.battle-mode .hand-card.illustrated-card { padding: 0 0 8px; border-radius: 9px; }
+.battle-mode .hand-card.illustrated-card .card-topline { z-index: 5; inset: 5px 5px auto; }
+.battle-mode .hand-card.illustrated-card .card-cost,
+.battle-mode .hand-card.illustrated-card .sigil-chip { width: 25px; height: 25px; font-size: 16px; }
+.battle-mode .hand-card.illustrated-card .card-title { order: -1; display: flex; align-items: center; justify-content: center; flex: 0 0 40px; min-height: 40px; max-height: 40px; margin: 0; padding: 3px 33px; text-align: center; color: #21352e; font-size: 12px; line-height: 1.12; background: #e9e9d3; }
+.battle-mode .hand-card.illustrated-card .card-illustration { flex: 0 0 67px; height: 67px; margin: 0 0 7px; }
+.battle-mode .hand-card.illustrated-card .card-description { min-height: 0; margin: 0 9px; font-size: 12px; line-height: 1.3; color: #213b35; }
+.battle-mode .hand-card.illustrated-card .card-bottomline { margin: auto 9px 0; padding-top: 5px; }
+.battle-mode .hand-card.illustrated-card .card-sigil-name { font-size: 11px; letter-spacing: 0; }
+.battle-mode .hand-card.illustrated-card .card-cost-label { display: none; }
+.battle-mode .hand-card.illustrated-card .prism-card-bonus { bottom: 4px; right: 5px; font-size: 11px; }
+.landscape-battle .hand-zone .hand-footer { left: -2%; right: -2%; bottom: calc(var(--hand-hidden) + 4px); font-size: 11px; line-height: 1.3; color: #e1e9d8; text-shadow: 0 1px 4px #02111b, 0 1px 8px #02111b; }
+.landscape-battle .hand-zone .hand-footer > span { display: inline-block; max-width: 100%; padding: 4px 10px; border-radius: 12px; background: #071d27e3; }
+.landscape-battle .hand-zone .empty-hand { align-self: end; margin-bottom: calc(var(--hand-hidden) + 28px); color: #d1e1d1; font-size: 13px; }
+.landscape-battle .hand-overflow .hand-cards { overflow-x: auto; overflow-y: hidden; justify-content: flex-start; padding-left: 18px; padding-right: 18px; scroll-padding-inline: 18px; scrollbar-width: none; overscroll-behavior-x: contain; }
+.landscape-battle .hand-overflow .hand-cards::-webkit-scrollbar { display: none; }
+.landscape-battle .hand-overflow .hand-card + .hand-card { margin-left: 5px; }
+.landscape-battle .hand-overflow .hand-cards .hand-card,
+.landscape-battle .hand-overflow .hand-cards .hand-card:hover { --hand-angle: 0deg; --hand-lift: 0px; touch-action: pan-x; }
+
+/* The card itself is the preview; only a concise action hint remains above it. */
+.landscape-battle .card-readout { display: none; }
+.pile-button { z-index: 13; min-width: 74px; min-height: 44px; bottom: max(7px, env(safe-area-inset-bottom)); grid-template-columns: 21px auto; gap: 0 5px; padding: 4px; }
+.draw-pile { left: max(4.9%, calc(env(safe-area-inset-left) + 16px)); }
+.discard-pile { right: max(4.8%, calc(env(safe-area-inset-right) + 12px)); }
+.pile-button .pile-symbol { font-size: 29px; }
+.pile-button b { font-size: 19px; }
+.pile-button small { font-size: 11px; }
+.battle-actions { z-index: 13; right: max(3.8%, calc(env(safe-area-inset-right) + 12px)); bottom: max(59px, calc(env(safe-area-inset-bottom) + 44px)); width: 135px; gap: 4px; }
+.battle-actions .end-turn { width: 132px; height: 54px; font-size: 14px; }
+.battle-actions .reweave-button { min-height: 36px; font-size: 11px; }
+.battle-actions .reweave-button > span { font-size: 19px; }
+.battle-journal { top: auto; bottom: 155px; left: max(25px, calc(env(safe-area-inset-left) + 10px)); width: 44px; max-width: none; font-size: 0; opacity: .8; }
+.battle-journal > span { font-size: 24px; }
+
+/* A guide in the empty middle of the field, keeping each live target reachable. */
+.tutorial-coach { position: absolute; z-index: 9; top: 30%; left: 32%; width: min(28%, 330px); padding: 16px 18px 14px; border: 0; border-left: 2px solid #c8cf9366; border-radius: 0 14px 14px 0; background: linear-gradient(100deg, #102934ed, #102934d1 80%, #10293485); color: #e7ecd7; box-shadow: 0 9px 25px #03121c24; }
+.tutorial-kicker { display: flex; justify-content: space-between; gap: 8px; color: #d4c696; font-size: 11px; line-height: 1.3; letter-spacing: .06em; }
+.tutorial-kicker > span:last-child { color: #bbcfbd; white-space: nowrap; letter-spacing: 0; }
+.tutorial-coach h2 { margin: 7px 0 8px; color: #f3ebce; font: 500 20px/1.15 Georgia, "Songti SC", serif; }
+.tutorial-coach p { margin: 0; font-size: 13px; line-height: 1.5; color: #d5e0d2; }
+.tutorial-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; margin-top: 12px; }
+.tutorial-actions button { min-height: 38px; padding: 7px 12px; border: 1px solid #d2d8a36b; border-radius: 5px; background: #b5c79714; color: #e9eccd; font-size: 12px; line-height: 1.2; cursor: pointer; }
+.tutorial-actions .button-quiet, .tutorial-actions [data-action="tutorial-exit"] { border-color: transparent; padding-left: 0; padding-right: 0; background: none; color: #c3d1c4; }
+.tutorial-progress { margin-top: 9px; color: #b1c6b9; font-size: 11px; line-height: 1.2; }
+.tutorial-progress:has(i) { display: flex; gap: 5px; }
+.tutorial-progress i { width: 16px; height: 3px; border-radius: 2px; background: #7495865c; }
+.tutorial-progress i.complete, .tutorial-progress i.is-complete, .tutorial-progress i.active, .tutorial-progress i.is-active { background: #d8d9a2; }
+.tutorial-progress:empty, .tutorial-actions:empty { display: none; }
+.tutorial-highlight, .tutorial-focus { outline: 2px solid #e7d998; outline-offset: 4px; }
+.landscape-battle .hand-zone .hand-cards .hand-card:is(.tutorial-highlight, .tutorial-focus) { border-color: #f5e9ae; box-shadow: 0 0 0 2px #e0d49ba8, 0 0 18px #e2d89b4a; }
+.landscape-battle .combat-stage .intent:is(.tutorial-highlight, .tutorial-focus) { outline-offset: 3px; box-shadow: 0 0 21px #e2d89b25; }
+.tutorial-muted { filter: saturate(.55); }
+.tutorial-battle .battle-journal { display: none; }
+.tutorial-battle.combat-resolving .tutorial-coach { visibility: hidden; }
+.tutorial-battle .combat-banner { top: 0; left: 50%; }
+.tutorial-battle .combat-stage .foe-row { left: 64%; }
+.title-tutorial-link { min-height: 44px; padding: 5px 0; border: 0; background: none; color: #e0d5ab; font: 12px/1.3 Georgia, "Songti SC", serif; text-align: left; cursor: pointer; }
+.title-tutorial-link:hover, .title-tutorial-link:focus-visible { color: #fff2c8; }
+.resource-guide { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 15px 24px; margin-top: 22px; }
+.resource-guide > article { display: grid; grid-template-columns: 34px minmax(0, 1fr); align-items: start; gap: 10px; padding: 0 0 15px; border-bottom: 1px solid #91b4a025; }
+.resource-guide-icon { display: grid; place-items: center; min-height: 32px; color: #d5d9ab; font-size: 25px; }
+.resource-guide h3 { margin: 0 0 5px; color: #e2e9d4; font: 500 16px/1.25 Georgia, "Songti SC", serif; }
+.resource-guide p { margin: 0; color: #c2d0c4; font-size: 13px; line-height: 1.5; }
+
+@media (hover: hover) {
+  .landscape-battle .hand-zone .hand-cards .hand-card:hover {
+    z-index: 70;
+    transform: translateY(calc(-1 * var(--hand-reveal))) rotate(0deg) scale(1.06);
+    border-color: #f2edc2;
+    box-shadow: 0 17px 31px #03121bc2, 0 0 0 2px #e0e9bf98;
+    opacity: 1;
+  }
+  .energy-orb:hover { filter: brightness(1.13); }
+}
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .landscape-battle { --card-width: 120px; --card-height: 176px; --hand-hidden: 94px; --hand-reveal: 110px; }
+  body.battle-mode .topbar { height: 39px; }
+  body.battle-mode .brand-button strong { font-size: 10px; letter-spacing: .18em; }
+  body.battle-mode .quiet-control { min-height: 40px; min-width: 40px; font-size: 12px; }
+  body.battle-mode .sound-control { font-size: 20px; }
+  .battle-location { top: 43px; left: max(23px, calc(env(safe-area-inset-left) + 13px)); }
+  .battle-location small { font-size: 10px; }
+  .battle-location h1 { max-width: 210px; margin-top: 3px; font-size: 18px; }
+  .battle-turn { top: 43px; right: max(23px, calc(env(safe-area-inset-right) + 13px)); gap: 3px; }
+  .battle-turn strong { font-size: 14px; }
+  .battle-turn > span { font-size: 11px; }
+  .sigil-compass { top: 19px; min-height: 85px; width: 196px; padding: 5px 8px; }
+  .sigil-orbit { gap: 18px; padding-bottom: 16px; }
+  .sigil-node { width: 29px; height: 29px; font-size: 19px; }
+  .sigil-node .sigil-label { bottom: -15px; font-size: 10px; }
+  .sigil-orbit::before { width: 139px; height: 35px; }
+  .compass-caption { margin-top: 4px; font-size: 11px; }
+  .compass-caption i { font-size: 11px; }
+  .compass-reaction { margin-top: 2px; min-height: 12px; font-size: 10px; }
+  .landscape-battle .arena.combat-stage { inset: 103px 7% 99px; }
+  .landscape-battle .hero-slot { left: 2%; width: 27%; }
+  .landscape-battle .hero-figure { height: clamp(140px, 38dvh, 190px); width: clamp(154px, 20vw, 224px); max-width: 120%; }
+  .landscape-battle .hero-caption { font-size: 12px; }
+  .landscape-battle .hero-health { width: 118px; height: 5px; margin-top: 5px; }
+  .landscape-battle .hero-stats { min-height: 32px; margin-top: 4px; gap: 12px; font-size: 12px; }
+  .landscape-battle .hero-stats small { font-size: 10px; }
+  .landscape-battle .hero-stats b { font-size: 12px; }
+  .landscape-battle .hero-guard { font-size: 11px; }
+  .landscape-battle .combat-stage .foe-row { left: 48%; right: -1%; gap: 14px; }
+  .landscape-battle .combat-stage .foe-card { flex-basis: 163px; width: 163px; padding-top: 32px; }
+  .landscape-battle .combat-stage .foe-art { height: clamp(124px, 35dvh, 178px); flex-basis: clamp(124px, 35dvh, 178px); }
+  .landscape-battle .combat-stage .foe-name-row strong { font-size: 12px; }
+  .landscape-battle .combat-stage .foe-health { height: 5px; flex-basis: 5px; max-width: 117px; margin-top: 5px; margin-bottom: 4px; }
+  .landscape-battle .combat-stage .foe-stats { max-width: 117px; font-size: 12px; }
+  .landscape-battle .combat-stage .foe-stats small { font-size: 10px; }
+  .landscape-battle .combat-stage .intent { min-height: 27px; padding: 4px 8px; font-size: 12px; }
+  .landscape-battle .combat-stage .intent > span { font-size: 15px; }
+  .landscape-battle .combat-stage .foe-card.foe-boss { flex-basis: 212px; width: 212px; }
+  .landscape-battle .combat-stage .foe-boss .foe-art { height: clamp(141px, 39dvh, 194px); flex-basis: clamp(141px, 39dvh, 194px); }
+  .landscape-battle .combat-stage .target-label { bottom: -24px; font-size: 10px; padding: 4px 6px; }
+  .landscape-battle .combat-banner { top: 8%; left: 43%; max-width: 46%; }
+  .landscape-battle .combat-banner strong { font-size: 15px; }
+  .landscape-battle .combat-banner small { font-size: 11px; }
+  .energy-orb { left: max(4.1%, calc(env(safe-area-inset-left) + 11px)); bottom: max(42px, calc(env(safe-area-inset-bottom) + 28px)); width: 66px; height: 66px; }
+  .energy-orb strong { font-size: 26px; }
+  .energy-orb strong small { font-size: 12px; }
+  .energy-orb > span { margin-top: 1px; font-size: 11px; }
+  .energy-orb .resource-hint { margin-top: 2px; font-size: 10px; }
+  .landscape-battle .hand-zone { width: 71%; }
+  .landscape-battle .hand-zone .hand-card + .hand-card { margin-left: -22px; }
+  .landscape-battle .hand-many:not(.hand-overflow) .hand-card + .hand-card { margin-left: -43px; }
+  .landscape-battle .hand-overflow .hand-card + .hand-card { margin-left: 5px; }
+  .battle-mode .hand-card.illustrated-card .card-topline { inset: 5px 5px auto; }
+  .battle-mode .hand-card.illustrated-card .card-cost,
+  .battle-mode .hand-card.illustrated-card .sigil-chip { width: 22px; height: 22px; font-size: 15px; }
+  .battle-mode .hand-card.illustrated-card .card-title { flex-basis: 39px; min-height: 39px; max-height: 39px; padding: 3px 28px; font-size: 11px; }
+  .battle-mode .hand-card.illustrated-card .card-illustration { height: 51px; flex-basis: 51px; margin-bottom: 5px; }
+  .battle-mode .hand-card.illustrated-card .card-description { margin: 0 8px; font-size: 11px; line-height: 1.25; }
+  .battle-mode .hand-card.illustrated-card .card-bottomline { margin-left: 8px; margin-right: 8px; padding-top: 3px; }
+  .battle-mode .hand-card.illustrated-card .card-sigil-name { font-size: 10px; }
+  .landscape-battle .hand-zone .hand-footer { font-size: 10px; bottom: calc(var(--hand-hidden) + 2px); }
+  .landscape-battle .hand-zone .hand-footer > span { padding: 3px 8px; }
+  .pile-button { bottom: max(3px, env(safe-area-inset-bottom)); min-height: 40px; min-width: 68px; }
+  .draw-pile { left: max(4%, calc(env(safe-area-inset-left) + 9px)); }
+  .discard-pile { right: max(3.4%, calc(env(safe-area-inset-right) + 9px)); }
+  .pile-button .pile-symbol { font-size: 24px; }
+  .pile-button b { font-size: 17px; }
+  .pile-button small { font-size: 10px; }
+  .battle-actions { right: max(2.8%, calc(env(safe-area-inset-right) + 9px)); bottom: max(47px, calc(env(safe-area-inset-bottom) + 30px)); width: 110px; gap: 1px; }
+  .battle-actions .end-turn { width: 108px; height: 46px; font-size: 12px; padding: 7px 9px; }
+  .battle-actions .end-turn i { font-size: 17px; }
+  .battle-actions .reweave-button { min-height: 31px; font-size: 10px; padding: 3px 2px; }
+  .battle-journal { bottom: 116px; left: max(12px, env(safe-area-inset-left)); }
+  .tutorial-coach { top: 109px; left: 31%; width: 32%; padding: 10px 11px; }
+  .tutorial-kicker { font-size: 10px; }
+  .tutorial-coach h2 { margin: 5px 0 6px; font-size: 16px; }
+  .tutorial-coach p { font-size: 12px; line-height: 1.4; }
+  .tutorial-actions { margin-top: 8px; gap: 2px 8px; }
+  .tutorial-actions button { min-height: 33px; padding: 5px 8px; font-size: 11px; }
+  .tutorial-progress { margin-top: 6px; font-size: 10px; }
+  .tutorial-battle .combat-stage .foe-row { left: 63%; }
+  .tutorial-battle .combat-banner { top: 0; left: 50%; }
+  .title-tutorial-link { font-size: 11px; }
+  .resource-guide { gap: 12px 20px; margin-top: 15px; }
+  .resource-guide > article { grid-template-columns: 28px minmax(0, 1fr); gap: 8px; padding-bottom: 12px; }
+  .resource-guide h3 { font-size: 14px; }
+  .resource-guide p { font-size: 12px; line-height: 1.4; }
+}
+
+@media (max-width: 720px) and (orientation: landscape) {
+  .landscape-battle { --card-width: 113px; --card-height: 176px; }
+  .battle-location h1 { max-width: 170px; font-size: 16px; }
+  .sigil-compass { width: 176px; }
+  .sigil-orbit { gap: 15px; }
+  .landscape-battle .hero-slot { left: 2%; width: 28%; }
+  .landscape-battle .hero-figure { width: 152px; }
+  .landscape-battle .combat-stage .foe-row { left: 46%; gap: 6px; }
+  .landscape-battle .combat-stage .foe-card { width: 139px; flex-basis: 139px; }
+  .landscape-battle .hand-zone { width: 69%; }
+  .landscape-battle .hand-zone .hand-card + .hand-card { margin-left: -34px; }
+  .landscape-battle .hand-many:not(.hand-overflow) .hand-card + .hand-card { margin-left: -61px; }
+  .landscape-battle .hand-overflow .hand-card + .hand-card { margin-left: 5px; }
+  .battle-mode .hand-card.illustrated-card .card-title { padding-left: 26px; padding-right: 26px; }
+  .battle-actions { right: max(13px, env(safe-area-inset-right)); width: 99px; }
+  .battle-actions .end-turn { width: 98px; font-size: 12px; gap: 4px; }
+  .energy-orb { left: max(19px, env(safe-area-inset-left)); width: 61px; height: 61px; }
+  .draw-pile { left: max(17px, env(safe-area-inset-left)); }
+  .discard-pile { right: max(20px, env(safe-area-inset-right)); }
+  .tutorial-coach { left: 31%; width: 32%; padding-left: 9px; padding-right: 9px; }
+  .tutorial-coach h2 { font-size: 15px; }
+  .tutorial-coach p { font-size: 11px; line-height: 1.38; }
+  .tutorial-battle .combat-stage .foe-row { left: 64%; }
+}
+
+@media (max-height: 350px) and (orientation: landscape) {
+  .landscape-battle .arena.combat-stage { bottom: 90px; }
+  .landscape-battle .hero-figure { height: 119px; }
+  .landscape-battle .combat-stage .foe-art { height: 111px; flex-basis: 111px; }
+  .landscape-battle .combat-stage .foe-boss .foe-art { height: 130px; flex-basis: 130px; }
+  .tutorial-coach { top: 96px; }
+  .tutorial-kicker { letter-spacing: 0; }
+  .tutorial-coach h2 { margin-top: 3px; margin-bottom: 4px; font-size: 14px; }
+  .tutorial-coach p { font-size: 11px; line-height: 1.25; }
+  .tutorial-actions { margin-top: 5px; }
+  .tutorial-actions button { min-height: 29px; }
+  .tutorial-progress { margin-top: 4px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landscape-battle .hand-zone .hand-cards .hand-card { transition-duration: .01ms; }
+}
+.reduce-motion .landscape-battle .hand-zone .hand-cards .hand-card { transition-duration: .01ms; }

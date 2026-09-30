@@ -28,7 +28,9 @@ python3 -m http.server 4173
 
 No account, download, external asset host, or build step is required.
 
-On a phone, turn the device **sideways**. Combat fills the screen: characters stand in the scene, enemy intentions float overhead, and the hand fans out along the bottom. Tap a card once to read it, then tap it again or choose a foe to cast. Tap the three sigils for combination details, or either card pile to inspect its contents.
+On a phone, turn the device **sideways**. Combat fills the screen: characters stand in a quiet, low-contrast scene, enemy intentions float overhead, and cards sit half-tucked below the bottom edge. Slide a finger across the hand or tap a card to raise and read it; tap it again or choose a foe to cast. Sliding only inspects cards. Hands of eight or more cards scroll horizontally and use tap-to-inspect. On desktop, hover to raise a card and click to play. Tap Energy or Health for a plain-language resource guide, the three seals for combination details, or either card pile to inspect its contents.
+
+New players are offered a **Training battle** before their first expedition. It guides a real encounter through enemy intent, Energy, Block, attacks, two-seal reactions, a three-seal Wake, and the next turn. The lesson can also be opened from the main menu or journal. It keeps any existing expedition separately and restores it when you leave; a lesson in progress resumes after reopening the app. English and Chinese instructions follow the same seven steps.
 
 Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Read the enemy intents, then choose which pair of currents best fits the turn. Tap a card, then choose a foe when asked. Press **1–5** to play a card, **← / →** to choose a foe, **Enter** to confirm a target, **E** to end a turn, **R** to reweave, and **Esc** to pause. The run autosaves locally, and the opening hand always contains all three sigils so both Resonance and Wake can be learned immediately.
 
@@ -45,7 +47,7 @@ Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Re
 
 ## Languages
 
-English is the default. Simplified Chinese is available from the in-game language control. Both translations live in the same localization dictionary so rules and tooltips stay in sync.
+English is the default. Simplified Chinese is available from the in-game language control. Both languages share the same localization keys so rules and tooltips stay in sync.
 
 ## Combat presentation
 
