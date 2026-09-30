@@ -1,6 +1,6 @@
 import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js";
 import { activateAudio, playSound, setSoundEnabled, setMusicEnabled, setVolume, suspendAudio, resumeAudio } from "./audio.js";
-import { renderCombatant } from "./combat-art.js";
+import { COMBATANT_IDS, renderCombatant } from "./combat-art.js?v=portraits-1";
 import { renderBattleScenery } from "./battle-scenery.js";
 import { animateAttack, animateImpact, animateWake, animateDiscard, animateDeal } from "./combat-motion.js";
 
@@ -918,6 +918,27 @@ function renderSummary() {
 function renderModal() {
   if (!ui.modal) return "";
   const modal = ui.modal;
+  if (modal === "field-guide") {
+    const figures = COMBATANT_IDS.map((id) => {
+      const name = id === "hero" ? tr("chartkeeper") : enemyName({ id });
+      return `<button class="field-guide-entry" type="button" data-action="character-detail" data-character="${id}" data-focus="guide-${id}">
+        ${renderCombatant(id, { idle: false, eager: false })}
+        <small>${id === "hero" ? "TRISEAL" : tr("enemyKind")}</small><strong>${escapeHtml(name)}</strong>
+        ${ENEMIES[id] ? `<span>${tr("portraitHealth")} · ${ENEMIES[id].hp}</span>` : ""}
+      </button>`;
+    }).join("");
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card field-guide-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">TRISEAL</span><h2 id="modal-title">${tr("fieldGuide")}</h2><p class="gallery-intro">${tr("fieldGuideDescription")}</p><div class="field-guide-grid">${figures}</div><button class="button button-quiet gallery-back" type="button" data-action="help" data-focus="guide-help">← ${tr("howTo")}</button></section></div>`;
+  }
+  if (modal.startsWith("character-") && COMBATANT_IDS.includes(modal.slice(10))) {
+    const id = modal.slice(10);
+    const name = id === "hero" ? tr("chartkeeper") : enemyName({ id });
+    const enemy = ENEMIES[id];
+    const details = enemy ? `<p>${tr("portraitHealth")} · ${enemy.hp}</p><span class="section-eyebrow">${tr("portraitMoveCycle")}</span><ol class="character-intents">${enemy.pattern.map((intent) => {
+      const key = intent.type === "attack" ? "intentAttack" : intent.type === "brace" ? "intentBrace" : "intentCharge";
+      return `<li>${tr(key, { n: intent.value })}</li>`;
+    }).join("")}</ol>` : `<p>${tr("portraitKeeperDescription")}</p>`;
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card character-detail-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><div class="character-detail">${renderCombatant(id, { idle: false })}<div class="character-detail-copy"><span class="section-eyebrow">${id === "hero" ? "TRISEAL" : tr("enemyKind")}</span><h2 id="modal-title">${escapeHtml(name)}</h2>${details}<button class="button button-quiet gallery-back" type="button" data-action="field-guide" data-focus="character-guide">← ${tr("fieldGuide")}</button></div></div></section></div>`;
+  }
   if (modal === "sigils" || modal === "battle-log") {
     const title = tr(modal === "sigils" ? "sigilDetails" : "battleLog");
     return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card battle-detail-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><h2 id="modal-title">${title}</h2>
@@ -940,6 +961,7 @@ function renderModal() {
     ];
     return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card help-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">TRISEAL</span><h2 id="modal-title">${tr("helpTitle")}</h2>
       <button type="button" class="gallery-link" data-action="card-gallery" data-focus="card-gallery"><span class="gallery-link-art" aria-hidden="true">${["needle", "brace", "glassline"].map((id) => renderCardImage(id)).join("")}</span><span><strong>${tr("cardGallery")}</strong><small>${tr("cardGalleryDescription")}</small></span><b aria-hidden="true">→</b></button>
+      <button type="button" class="gallery-link" data-action="field-guide" data-focus="field-guide"><span class="field-guide-link-art" aria-hidden="true">${["hero", "driftling"].map((id) => renderCombatant(id, { idle: false, eager: false })).join("")}</span><span><strong>${tr("fieldGuide")}</strong><small>${tr("fieldGuideDescription")}</small></span><b aria-hidden="true">→</b></button>
       <div class="help-grid">${sections.map(([number, id]) => `<article><span class="help-number">${number}</span><h3>${tr(`help${id}Title`)}</h3><p>${tr(`help${id}Body`)}</p></article>`).join("")}</div>
     </section></div>`;
   }
@@ -1036,7 +1058,11 @@ function handleAction(actionButton, clickEvent) {
       break;
     case "help":
     case "card-gallery":
+    case "field-guide":
       showModal(action);
+      break;
+    case "character-detail":
+      if (COMBATANT_IDS.includes(actionButton.dataset.character)) showModal(`character-${actionButton.dataset.character}`);
       break;
     case "settings":
       showModal("settings");

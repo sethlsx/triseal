@@ -1,0 +1,27 @@
+{
+  "tool": "Built-in image_gen",
+  "created": "2026-09-30",
+  "export": {
+    "format": "WebP",
+    "height": 768,
+    "quality": 88,
+    "alphaQuality": 100,
+    "contentEdits": "None; resize and encoding only"
+  },
+  "assets": [
+    {
+      "id": "hero",
+      "file": "hero.webp",
+      "source": "exec-a4deb052-5e65-47d8-a954-3e9d3944142b.png",
+      "reference": "Original generated Thread Needle painting; style only",
+      "prompt": "Use case: stylized-concept. Asset type: ONE original full-body battle character cutout for the Triseal card roguelite. Input image 1 is only a painting STYLE reference for intricate weathered brass, tactile hand-painted fantasy material, luminous teal/ivory light, dramatic high-quality details. Do NOT copy its needle or background. Match the rich quality of the card art, with bold readable silhouette.\nBackground must be genuinely transparent with alpha. No background architecture, landscape, floor plane, studio backdrop, opaque atmospheric rectangle, card frame, interface, words, logos, or watermark. Keep all body parts and props wholly inside frame with 8 percent clear margin; composition centered, entire figure occupies 80-85 percent of canvas height. No cropping. Fine edge quality for compositing on a dark teal game scene. Rich painted fantasy illustration, original design, no franchise references.\nSubject: The Chartkeeper: an adult human wandering ocean cartographer, full body in a three-quarter pose facing RIGHT, poised and alert. Tall clear silhouette, readable gloved hands and booted feet. Weathered deep petrol teal hooded sailor's coat with layered split hems, brass clasps, stitched faded sea charts as inner lining, copper ochre scarf flowing LEFT behind their shoulder. Shadowed hood reveals a believable calm face with pale eyes, not a black empty void or skull. Leather belt with a small rolled chart case and brass compass, practical worn gloves. Rightward hand holds a slender elegant antique brass surveyor staff topped with a large luminous translucent sea-glass diamond, full staff inside image; other hand opens toward the RIGHT as if drawing a magical current. Warm copper rim lights on cloth seams, pale turquoise staff light illuminating face. Painterly depth, slightly heroic proportions, distinct expressive silhouette, an individual character rather than a generic wizard."
+    },
+    {
+      "id": "horizon",
+      "file": "horizon.webp",
+      "source": "exec-bb8713a8-9add-4ca6-90e5-52d328cba6d3.png",
+      "reference": "Text-only generation; no image inputs",
+      "prompt": "Original full-body transparent cutout for a painted fantasy card game: The Missing Horizon, a huge ivory-gold eye encased in a broken ancient brass astrolabe with jagged dark amethyst coral plates, two close orbital brass rings and two violet tendrils. Eye gazes left. Rich weathered copper engraving, purple sea glass, painterly sculptural shading, elegant ominous maritime spirit. Bold readable silhouette, square composition, full creature centered with 10% clear margin on every side. Genuinely transparent alpha background. No scenery, no floor, no text, no border, no logos or interface. Tight rim light only. One original creature, not a collage."
+    }
+  ]
+}

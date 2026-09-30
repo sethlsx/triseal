@@ -1,0 +1,76 @@
+/* Original transparent paintings: no frame or rectangular image effect. */
+.painted-portrait { --portrait-scale: 1; --portrait-lift: 0px; position: relative; isolation: isolate; filter: none; pointer-events: none; user-select: none; }
+.portrait-body { position: absolute; z-index: 1; inset: 0 0 5%; display: block; transform-origin: 50% 94%; }
+.character-image { display: block; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; transform: translateY(var(--portrait-lift)) scale(var(--portrait-scale)); transform-origin: center bottom; user-select: none; -webkit-user-drag: none; }
+.portrait-ground { position: absolute; z-index: 0; left: 20%; right: 20%; bottom: 1%; height: 8%; border-radius: 50%; background: radial-gradient(ellipse, #031016b8, #04151b50 52%, transparent 74%); transform: scaleY(.75); }
+.art-hero { --portrait-scale: 1.07; }
+.art-hero .portrait-ground { left: 29%; right: 24%; bottom: 0; }
+.art-brineback { --portrait-scale: 1.08; }
+.art-brineback .portrait-ground { left: 6%; right: 6%; height: 10%; }
+.art-driftling { --portrait-lift: -3px; }
+.art-driftling .portrait-ground { left: 31%; right: 31%; opacity: .7; }
+.art-mirrorfin .portrait-ground { left: 16%; right: 16%; opacity: .6; }
+.art-inkling .portrait-ground { left: 24%; right: 24%; opacity: .7; }
+.art-bellwether .portrait-ground { left: 33%; right: 33%; opacity: .7; }
+.art-horizon .portrait-ground { left: 8%; right: 8%; opacity: .55; }
+.portrait-idle .portrait-breathe { animation: portrait-breathe 4.2s ease-in-out infinite; }
+.portrait-idle .portrait-heavy { animation: portrait-heavy 4.7s ease-in-out infinite; }
+.portrait-idle .portrait-float { animation: portrait-float 4.6s ease-in-out infinite; }
+.art-driftling .portrait-body { animation-delay: -.8s; }
+.art-mirrorfin .portrait-body { animation-delay: -1.7s; }
+.art-inkling .portrait-body { animation-delay: -2.2s; }
+.art-bellwether .portrait-body { animation-delay: -.5s; }
+.art-horizon .portrait-body { animation-duration: 6.5s; }
+.combat-stage .defeated .portrait-body { animation: none; transform: translateY(12px) rotate(12deg) scale(.9); }
+/* Target rings sit beneath the painted feet and do not outline the cutout. */
+.combat-stage .foe-art:has(.painted-portrait) { isolation: isolate; }
+.combat-stage .foe-art:has(.painted-portrait)::after { bottom: 0; z-index: -1; }
+@keyframes portrait-breathe { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-1px) scaleY(1.018); } }
+@keyframes portrait-heavy { 0%, 100% { transform: scale(1); } 50% { transform: scale(1.015, 1.026); } }
+@keyframes portrait-float { 0%, 100% { transform: translateY(0) rotate(-.4deg); } 50% { transform: translateY(-4px) rotate(.6deg); } }
+
+/* An informational gallery offers a closer look without changing a run. */
+.field-guide-link-art { display: flex; flex: 0 0 110px; height: 62px; justify-content: center; gap: 2px; }
+.field-guide-link-art > .painted-portrait { width: 50%; }
+.field-guide-link-art .portrait-ground { display: none; }
+.modal-card.field-guide-modal { width: min(94vw, 980px); }
+.field-guide-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 24px 18px; }
+.field-guide-entry { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 5px 10px 14px; border: 0; border-bottom: 1px solid #bdd2bf24; background: transparent; color: #e0e7ce; cursor: zoom-in; }
+.field-guide-entry:hover { background: radial-gradient(ellipse at 50% 50%, #789f771a, transparent 70%); }
+.field-guide-entry:focus-visible { outline: 2px solid #d4e7bc; outline-offset: 3px; }
+.field-guide-entry > .painted-portrait { width: 100%; height: 220px; }
+.field-guide-entry small { display: block; margin-top: 12px; color: #9cb2a4; font-size: 9px; letter-spacing: .08em; }
+.field-guide-entry strong { margin-top: 7px; font: 500 20px/1.2 Georgia, "Songti SC", serif; }
+.field-guide-entry > span:last-child:not(.painted-portrait) { margin-top: 5px; color: #c1ceba; font-size: 11px; }
+.modal-card.character-detail-modal { width: min(94vw, 860px); }
+.character-detail { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(190px, .8fr); gap: 35px; align-items: center; }
+.character-detail > .painted-portrait { height: min(62vh, 560px); }
+.character-detail-copy h2 { margin-bottom: 16px; }
+.character-detail-copy > p { color: #bed0bc; font-size: 13px; line-height: 1.6; }
+.character-detail-copy .gallery-back { margin-top: 20px; }
+.character-intents { display: flex; flex-wrap: wrap; gap: 7px 14px; padding: 0; margin-top: 10px; list-style: none; color: #d8c5ad; font-size: 12px; line-height: 1.5; }
+.character-intents li { display: flex; align-items: center; gap: 8px; }
+.character-intents li + li::before { content: "→"; color: #7c998d; }
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .field-guide-link-art { height: 48px; flex-basis: 96px; }
+  .field-guide-entry > .painted-portrait { height: 180px; }
+  .field-guide-entry strong { font-size: 17px; }
+  .character-detail { grid-template-columns: minmax(0, 1fr) minmax(185px, .9fr); gap: 24px; }
+  .character-detail > .painted-portrait { height: calc(100dvh - 75px); max-height: 360px; }
+  .character-detail-copy h2 { font-size: 24px; }
+}
+@media (max-width: 700px) {
+  .field-guide-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 12px; }
+  .field-guide-entry > .painted-portrait { height: 180px; }
+}
+@media (max-width: 550px) and (orientation: portrait) {
+  .character-detail { grid-template-columns: 1fr; gap: 15px; }
+  .character-detail > .painted-portrait { height: 42vh; }
+  .character-detail-copy { text-align: center; }
+  .character-intents { justify-content: center; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .portrait-idle .portrait-body { animation: none !important; }
+}
+.reduce-motion .portrait-idle .portrait-body { animation: none !important; }

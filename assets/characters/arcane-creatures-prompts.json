@@ -1,0 +1,53 @@
+{
+  "generator": "Built-in image_gen",
+  "generatedAt": "2026-09-30",
+  "reference": "assets/cards/needle.webp (original project card art, style only)",
+  "background": "transparent",
+  "export": "cwebp -resize 0 768 -q 88 -alpha_q 100; original alpha preserved",
+  "assets": [
+    {
+      "name": "inkling",
+      "output": "inkling.webp",
+      "sourceBasename": "exec-571ac40d-6a8d-4e82-898b-25a4c4c92898.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: original full-body 2D enemy portrait for Triseal, a maritime fantasy card combat game, to composite over a battle environment.\nInput image: STYLE REFERENCE ONLY. Match the tactile painterly materials, sophisticated shading, weathering, and cinematic detail of the reference card art. Do not copy the needle, card composition, or observatory scenery.\nScene/backdrop: genuinely transparent alpha background. A single isolated creature only. No environment, floor, shadow plane, rectangular glow, framing, text, UI, border, or watermark.\nStyle/medium: high quality hand-painted fantasy game illustration, dimensional but painterly, not a flat icon, emoji, cartoon or photograph. Bold readable silhouette that remains clear when displayed small.\nComposition/framing: entire body centered and occupying approximately 80% of square image; all appendages fully inside the frame, with transparent breathing room. Three-quarter LEFT-facing view, clearly looking left toward its opponent. Clean cutout edges. Soft glow restricted to within the body, no outside rectangular haze.\nSubject: Inkling, a mysterious small sea-octopus spirit. Its amethyst mantle forms a dripping ink hood, with four to six elegantly curling thick tentacles. Ancient indigo lacquer surface with subtle marine texture; translucent lavender along the edges. Two narrowed luminous lilac eyes on the LEFT-facing side. A few tiny ink droplets very close to the body. A magical creature with sly, ancient personality. Shape is solid and clearly readable, rich purple shadows and subtle cool edge lighting. No props.",
+      "alpha": {
+        "width": 768,
+        "height": 768,
+        "channels": 4,
+        "hasAlpha": true,
+        "transparentPixels": 253582,
+        "partialAlphaPixels": 336242,
+        "opaquePixels": 0,
+        "maxAlpha": 253,
+        "alphaAbove127Bounds": {
+          "minX": 19,
+          "minY": 18,
+          "maxX": 749,
+          "maxY": 748
+        }
+      }
+    },
+    {
+      "name": "bellwether",
+      "output": "bellwether.webp",
+      "sourceBasename": "exec-82a7f876-6928-4af0-b4b9-221cb615051a.png",
+      "prompt": "Use case: stylized-concept.\nAsset type: original full-body 2D enemy portrait for Triseal, a maritime fantasy card combat game, to composite over a battle environment.\nInput image: STYLE REFERENCE ONLY. Match the tactile painterly materials, sophisticated shading, weathering, and cinematic detail of the reference card art. Do not copy the needle, card composition, or observatory scenery.\nScene/backdrop: genuinely transparent alpha background. A single isolated creature only. No environment, floor, shadow plane, rectangular glow, framing, text, UI, border, or watermark.\nStyle/medium: high quality hand-painted fantasy game illustration, dimensional but painterly, not a flat icon, emoji, cartoon or photograph. Bold readable silhouette that remains clear when displayed small.\nComposition/framing: entire body centered and occupying approximately 80% of square image; all appendages fully inside the frame, with transparent breathing room. Three-quarter LEFT-facing view, clearly looking left toward its opponent. Clean cutout edges. Soft glow restricted to within the body, no outside rectangular haze.\nSubject: Bellwether, an ancient floating brass diving-bell creature. Weathered copper bell body, stylized engraved marine relief and verdigris collected in the seams; a small loop crown at its top. The underside of the bell is open and contains a luminous pale-gold diamond crystal suspended inside. Three short braided-water tendrils trail beneath it and curl in a controlled readable silhouette. It has the sinister presence of a sacred instrument. Bell oriented in three-quarter view toward LEFT. Surface highlights show tactile hammered metal and sea patina. Whole body remains a solid coherent shape with clean outer edges; pale gold light remains inside the open bell. No floor or external aura.",
+      "alpha": {
+        "width": 768,
+        "height": 768,
+        "channels": 4,
+        "hasAlpha": true,
+        "transparentPixels": 350700,
+        "partialAlphaPixels": 239124,
+        "opaquePixels": 0,
+        "maxAlpha": 254,
+        "alphaAbove127Bounds": {
+          "minX": 87,
+          "minY": 6,
+          "maxX": 716,
+          "maxY": 759
+        }
+      }
+    }
+  ]
+}

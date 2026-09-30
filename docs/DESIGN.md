@@ -34,7 +34,7 @@ Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a car
 - A one-use **Reweave** per expedition: replace the hand once before ending a turn. This is an agency tool, not a guarantee of a win.
 - Local autosave at safe route points and a manual pause menu.
 - English and Simplified Chinese, keyboard and pointer input, adjustable sound, and reduced motion.
-- An original SVG chartkeeper faces six distinct animated sea creatures on a shared battlefield. Intent markers remain above the figures; health and guard remain below.
+- An original painted chartkeeper faces six distinct animated sea creatures on a shared battlefield. Transparent cutouts preserve the shapes of cloaks, fins, shells, and tendrils; intent markers remain above the figures and health and guard remain below. The Field guide offers a larger view of every portrait.
 - Combat resolves in visible beats: card flight, casting anticipation, projectile contact, damage or absorption, then Resonance and Wake. Each surviving enemy performs its action separately before the new hand is dealt.
 - CSS and Web Animations API motion includes idle poses, lunges, spell trails, hit recoil, shield pulses, floating numbers, defeat dispersal, discard, and deal. Reduced motion preserves short numeric feedback without travel or shaking.
 - Inputs are locked only during resolution. Saves occur at complete action boundaries so a refresh during combat restores the previous complete state.

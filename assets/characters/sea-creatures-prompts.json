@@ -1,0 +1,67 @@
+{
+  "generator": "Built-in image_gen",
+  "generatedAt": "2026-09-30",
+  "reference": "assets/cards/needle.webp inspected for original project art direction; textual style description used without a reference-image input",
+  "background": "transparent",
+  "export": "cwebp -resize 0 768 -q 88 -alpha_q 100; original alpha preserved",
+  "assets": [
+    {
+      "name": "driftling",
+      "output": "driftling.webp",
+      "sourceBasename": "exec-67579368-264d-4986-b7aa-14f6a2b86908.png",
+      "prompt": "Use case: stylized-concept. Asset type: ORIGINAL enemy full-body portrait for the maritime fantasy card game Triseal. Art direction: richly textured fine-art fantasy illustration, painterly oil and gouache handling, tactile weathered materials, teal shadows and warm antique-brass highlights, luminous fine brushwork, detailed and polished yet bold readable silhouette at mobile-game size. Sea creatures from a drowned celestial observatory, wholly original designs. The picture must be a TRUE TRANSPARENT CUTOUT with real alpha, NOT painted checkerboard or solid background. No floor, no landscape, no architecture, no cast ground shadow, no rectangular glow or vignette. Full creature centered, fills the central 80% of canvas, every appendage and edge fully inside the frame with transparent breathing room. Subject faces LEFT toward the hero. No text, no logo, no card frame, no UI, no border, no letters, no numbers. Square canvas. Subject: DRIFTLING, floating bioluminescent sea spirit. A translucent turquoise jellyfish bell shaped like an ancient weathered scalloped coral helmet, pearlescent ivory edges engraved with subtle abstract cartographic linework, WITHOUT writing. A small bright sea-green heart glowing under the bell. Four distinct long flowing ribbon tendrils curve below and behind it. A tiny suspicious but curious pale luminous eye on the leftward face beneath the helmet rim. Rich watery translucency in creature materials while the exterior background is entirely transparent. Organic sculptural forms, pearly highlights, expressive posture, dangerous charming little spirit. Left-facing three-quarter profile, complete body and all four tendrils visible.",
+      "source": {
+        "width": 1254,
+        "height": 1254,
+        "hasAlpha": true
+      },
+      "alpha": {
+        "width": 768,
+        "height": 768,
+        "hasAlpha": true,
+        "encoding": "WebP ALPH, lossless alpha at alpha_q 100",
+        "metadataTool": "sips (PNG), cwebp and webpinfo (WebP)"
+      },
+      "bytes": 184850
+    },
+    {
+      "name": "brineback",
+      "output": "brineback.webp",
+      "sourceBasename": "exec-46773d9f-4739-48a2-96ec-86737acf6d75.png",
+      "prompt": "Use case: stylized-concept. Asset type: ORIGINAL enemy full-body portrait for the maritime fantasy card game Triseal. Art direction: richly textured fine-art fantasy illustration, painterly oil and gouache handling, tactile weathered materials, teal shadows and warm antique-brass highlights, luminous fine brushwork, detailed and polished yet bold readable silhouette at mobile-game size. Sea creatures from a drowned celestial observatory, wholly original designs. The picture must be a TRUE TRANSPARENT CUTOUT with real alpha, NOT painted checkerboard or solid background. No floor, no landscape, no architecture, no cast ground shadow, no rectangular glow or vignette. Full creature centered, fills the central 80% of canvas, every appendage and edge fully inside the frame with transparent breathing room. Subject faces LEFT toward the hero. No text, no logo, no card frame, no UI, no border, no letters, no numbers. Square canvas. Subject: BRINEBACK, a squat heavy sea tortoise. A broad compact animal, full body in left-facing three-quarter profile, with an ancient brass and stone shell, chunky faceted scutes worn by centuries underwater, delicate barnacles and several short ivory coral spines. Weathered deep teal skin, four powerful thick flippers with plated joints and clawlike edges, a stern wrinkled face on the LEFT, one wary pale glowing eye. Broad shoulder armor and deliberate heavy posture. Shell surfaces have patina, tiny etched star-chart linework with no letters, warm brass edges and mossy stone. Strong readable tortoise silhouette. All four limbs, full head, whole shell and small tail fully visible inside frame. No floor.",
+      "source": {
+        "width": 1254,
+        "height": 1254,
+        "hasAlpha": true
+      },
+      "alpha": {
+        "width": 768,
+        "height": 768,
+        "hasAlpha": true,
+        "encoding": "WebP ALPH, lossless alpha at alpha_q 100",
+        "metadataTool": "sips (PNG), cwebp and webpinfo (WebP)"
+      },
+      "bytes": 187794
+    },
+    {
+      "name": "mirrorfin",
+      "output": "mirrorfin.webp",
+      "sourceBasename": "exec-62eb5710-3935-4339-abd6-53e93096d3ce.png",
+      "prompt": "Use case: stylized-concept. Asset type: ORIGINAL enemy full-body portrait for the maritime fantasy card game Triseal. Art direction: richly textured fine-art fantasy illustration, painterly oil and gouache handling, tactile weathered materials, teal shadows and warm antique-brass highlights, luminous fine brushwork, detailed and polished yet bold readable silhouette at mobile-game size. Sea creatures from a drowned celestial observatory, wholly original designs. The picture must be a TRUE TRANSPARENT CUTOUT with real alpha, NOT painted checkerboard or solid background. No floor, no landscape, no architecture, no cast ground shadow, no rectangular glow or vignette. Full creature centered, fills the central 80% of canvas, every appendage and edge fully inside the frame with transparent breathing room. Subject faces LEFT toward the hero. No text, no logo, no card frame, no UI, no border, no letters, no numbers. Square canvas. Subject: MIRRORFIN, a levitating crystalline manta-ray fish. Elegant sweeping fin wings form a strong compact diamond silhouette, both wings wholly visible. Its pointed head is on the LEFT with a small luminous pale cyan eye. Long slender ribbon tail curves behind toward the RIGHT, wholly visible and tucked gracefully within the frame. Body composed of reflective lavender, silver and teal glass plates with milky translucent membranes between plates, subtle prism edges and precise pale-gold seams, each surface painterly and tactile. It is a magical sea creature, NOT a mechanical aircraft. Gently arcing fins and asymmetrical hovering posture, elegant but predatory. Three-quarter side view suitable for a battle enemy facing left. All fins and complete tail inside image.",
+      "source": {
+        "width": 1254,
+        "height": 1254,
+        "hasAlpha": true
+      },
+      "alpha": {
+        "width": 768,
+        "height": 768,
+        "hasAlpha": true,
+        "encoding": "WebP ALPH, lossless alpha at alpha_q 100",
+        "metadataTool": "sips (PNG), cwebp and webpinfo (WebP)"
+      },
+      "bytes": 152946
+    }
+  ]
+}
+

@@ -41,7 +41,9 @@ English is the default. Simplified Chinese is available from the in-game languag
 
 All eleven cards have individual original AI-generated illustrations: copper and embers, turquoise currents, and violet glass. Open **Help → Card atlas** to browse the complete set and read each effect in English or Simplified Chinese. Images ship locally as WebP; the prompts and asset origins are recorded in [Asset provenance](assets/PROVENANCE.md).
 
-Character drawings and combat effects are original inline SVG, CSS, and Web Animations API work. No external image or sound service is required. **Reduce motion** in Settings (or the system preference) removes travel, shaking, and idle movement while preserving readable combat numbers.
+The Chartkeeper and six enemies use original transparent AI-generated paintings, with distinct silhouettes and materials. Open **Help → Field guide** to browse and enlarge each figure. Breathing, floating, casting, lunges, and recoil remain separate animation layers; the illustrations stand directly in the battlefield.
+
+Scenery and combat effects use original SVG, CSS, and Web Animations API work. No external image or sound service is required. **Reduce motion** in Settings (or the system preference) removes travel, shaking, and idle movement while preserving readable combat numbers.
 
 The game saves after complete player actions and enemy turns. If a tab closes during a sequence, reopening restores the last complete action. Controls unlock when the visible sequence finishes.
 
