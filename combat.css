@@ -1,0 +1,134 @@
+/* Original Triseal combat stage and vector character motion. */
+.arena.combat-stage {
+  isolation: isolate;
+  height: 294px;
+  min-height: 294px;
+  align-items: flex-end;
+  background: radial-gradient(ellipse at 20% 53%, #26626340, transparent 33%), radial-gradient(ellipse at 73% 40%, #769d7b12, transparent 45%), linear-gradient(180deg, #112c3a, #173b44 55%, #102e37 74%, #0b242f);
+}
+.combat-stage::before {
+  opacity: .65;
+  background: linear-gradient(90deg, transparent 9%, #81afaa0a 9% 9.7%, transparent 9.7% 12%, #061b2970 12% 16%, transparent 16% 80%, #081e2c90 80% 85%, #7dacac0c 85% 85.8%, transparent 85.8%), radial-gradient(ellipse at 53% -55%, transparent 58%, #8ca4a112 58.3% 58.6%, transparent 59%), repeating-linear-gradient(170deg, transparent 0 68px, #9ac4b907 69px, transparent 70px 126px);
+}
+.combat-stage::after { z-index: 0; background: linear-gradient(0deg, #071c2980, transparent 33%), linear-gradient(90deg, #0c213c40, transparent 40%, #0c1b3420); }
+.combat-stage.arena-boss { background: radial-gradient(ellipse at 76% 43%, #b0676630, transparent 44%), linear-gradient(180deg, #232b41, #28394b 62%, #142632); }
+.combat-stage .arena-floor { bottom: 20%; left: 2%; right: 2%; height: 18%; border-color: #a3d5c925; background: radial-gradient(ellipse, #87bba516, transparent 70%); }
+.combat-stage .arena-glow { left: 41%; top: -5%; width: 49%; height: 110%; opacity: .5; }
+.combat-stage .arena-orbit { right: 12%; top: -25%; width: 300px; opacity: .7; }
+.hero-slot { position: relative; z-index: 2; flex: 0 0 27%; min-width: 0; height: 232px; margin: 0 0 24px 3%; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; }
+.hero-figure { position: relative; width: 174px; max-width: 100%; height: 188px; flex: none; transform-origin: 50% 90%; }
+.combat-portrait { display: block; width: 100%; max-width: 100%; min-width: 0; height: 100%; overflow: visible; filter: drop-shadow(0 5px 7px #03121e70); }
+.art-body { transform-origin: 50% 86%; animation: navigator-breathe 3.8s ease-in-out infinite; }
+.art-float { animation: creature-float 4.2s ease-in-out infinite; }
+.art-heavy { animation: reef-breathe 4.7s ease-in-out infinite; }
+.art-driftling .art-body { animation-delay: -.8s; }
+.art-mirrorfin .art-body { animation-delay: -1.7s; }
+.art-inkling .art-body { animation-delay: -2.2s; }
+.art-bellwether .art-body { animation-delay: -.5s; }
+.art-light { filter: drop-shadow(0 0 5px #befbdb); animation: lantern-glow 2.9s ease-in-out infinite alternate; }
+.art-horizon .art-light { filter: drop-shadow(0 0 7px #ffe2a8); }
+.art-cloth, .art-tendrils, .art-fin { transform-box: fill-box; transform-origin: center top; animation: current-sway 3.7s ease-in-out infinite alternate; }
+.art-scarf { animation-delay: -.7s; transform-origin: 100% 45%; }
+.art-orbit { transform-origin: 50% 50%; animation: orbit-tilt 6s ease-in-out infinite alternate; }
+.hero-caption, .hero-name { position: relative; z-index: 2; max-width: 100%; color: #c5decc; text-align: center; font: 500 13px/1.2 Georgia, "Times New Roman", serif; text-shadow: 0 2px 8px #041823; }
+.hero-caption small { display: block; margin-top: 4px; color: #8da79d; font: 8px/1.3 system-ui, sans-serif; letter-spacing: .09em; text-transform: uppercase; }
+.hero-health { width: min(110px, 85%); height: 4px; margin-top: 7px; border-radius: 8px; overflow: hidden; background: #dccec322; }
+.hero-health i { display: block; height: 100%; background: linear-gradient(90deg, #d88d82, #eac49d); transition: width .25s ease; }
+.hero-stats { display: flex; align-items: center; justify-content: space-between; gap: 12px; width: min(110px, 85%); margin-top: 5px; color: #e5c7ae; font-size: 10px; }
+.hero-stats small { color: #87a49c; font-size: 8px; }
+.hero-guard { color: #aee8d8; white-space: nowrap; }
+.hero-shield { position: absolute; inset: 20% 0 3%; border: 1px solid #99e5d500; border-radius: 48% 48% 44% 44%; transform: rotate(-8deg); opacity: 0; pointer-events: none; transition: opacity .22s ease; }
+.hero-shield::before, .hero-shield::after { content: ""; position: absolute; border: 1px solid #a0e9da55; border-radius: inherit; inset: 5px; }
+.hero-shield::after { inset: 10px; border-style: dashed; border-color: #8ddcc333; }
+.hero-guarded .hero-shield { opacity: 1; border-color: #a1efdc99; background: linear-gradient(110deg, transparent 30%, #a8ffdf08 70%, #a8ffdf23); box-shadow: inset -5px 0 18px #86e8cc23, 0 0 12px #8edbc722; }
+.combat-stage .foe-row { position: relative; width: 68%; min-width: 0; flex: 1; height: 100%; padding: 17px 18px 22px 4px; gap: clamp(5px, 2vw, 24px); align-items: flex-end; justify-content: space-evenly; }
+.combat-stage .foe-card { flex: 0 1 174px; width: 174px; min-width: 0; min-height: 0; height: 228px; margin: 0; padding: 30px 9px 0; border: 1px solid transparent; border-radius: 12px; background: transparent; box-shadow: none; text-align: center; transition: background .2s, border-color .2s; }
+.combat-stage .foe-card:hover { transform: none; border-color: #b3ddc811; background: linear-gradient(180deg, transparent, #b1dbbf06 70%, transparent); }
+.combat-stage .foe-card.foe-selected { border-color: transparent; box-shadow: none; }
+.combat-stage .foe-card:focus-visible { outline: 2px solid #b7ebd4; outline-offset: 2px; }
+.combat-stage .foe-art { position: relative; flex: 0 0 142px; height: 142px; width: 100%; overflow: visible; border-radius: 0; margin: 0; background: none; transform-origin: 50% 88%; }
+.combat-stage .foe-art::after { content: ""; position: absolute; left: 17%; right: 17%; bottom: 9%; height: 10px; border: 1px solid transparent; border-radius: 50%; transform: rotate(-3deg); transition: border-color .2s, box-shadow .2s; }
+.combat-stage .foe-selected .foe-art::after { border-color: #99d2bb70; box-shadow: 0 0 12px #78c2ab20; }
+.combat-stage .foe-card:hover .foe-art::after { border-color: #ace4cd; box-shadow: 0 0 14px #9bdebc50; }
+.combat-stage .foe-name-row { gap: 0; align-items: center; }
+.combat-stage .foe-name-row strong { width: 100%; font-size: 13px; line-height: 1.2; text-shadow: 0 2px 7px #081c29; }
+.combat-stage .foe-name-row small { display: none; }
+.combat-stage .foe-health { flex: 0 0 4px; width: 83%; margin: 8px auto 5px; background: #dbcac026; }
+.combat-stage .foe-stats { width: 83%; margin: 0 auto; font-size: 10px; }
+.combat-stage .intent { position: absolute; top: 6px; left: 50%; z-index: 2; transform: translateX(-50%); margin: 0; padding: 5px 9px; border: 1px solid #d1a28c26; background: #26343eee; color: #ffd0b0; font-size: 10px; box-shadow: 0 3px 8px #061b2740; }
+.combat-stage .intent-brace { color: #b1edda; border-color: #9ad4c337; background: #183d44ee; }
+.combat-stage .intent-charge { color: #dfcbfc; border-color: #bba0dc37; background: #30334aee; }
+.combat-stage .foe-card.foe-boss { flex-basis: 238px; width: 238px; height: 235px; border-color: transparent; }
+.combat-stage .foe-boss .foe-art { height: 153px; flex-basis: 153px; }
+.combat-stage .foe-boss .foe-name-row strong { font-size: 14px; }
+.combat-stage .foe-boss .foe-health, .combat-stage .foe-boss .foe-stats { width: 74%; }
+.combat-stage .foe-card.targetable { animation: none; }
+.combat-stage .targetable .foe-art::after { border-color: #aeeccc; animation: target-water-ring 1.3s ease-in-out infinite alternate; }
+.combat-stage .target-label { top: auto; right: auto; left: 50%; bottom: -14px; transform: translateX(-50%); white-space: nowrap; padding: 3px 6px; border-radius: 5px; font-size: 7px; letter-spacing: .03em; }
+.combat-stage .impact-number { top: 27%; right: 26%; font-size: 26px; }
+.combat-stage .foe-card.defeated { opacity: .2; border: 1px solid transparent; justify-content: flex-end; padding-bottom: 43px; }
+.combat-stage .defeated .foe-art { filter: grayscale(1); opacity: .6; }
+.combat-stage .defeated .art-body { animation: none; transform: translateY(18px) rotate(14deg) scale(.9); }
+.combat-stage .defeated-mark { font-size: 29px; color: #96b8ab; }
+.combat-stage .defeated .intent { visibility: hidden; }
+.combat-banner { position: absolute; z-index: 12; top: 9px; left: 50%; transform: translateX(-50%); display: grid; justify-items: center; gap: 2px; max-width: calc(100% - 24px); padding: 4px 20px; pointer-events: none; text-align: center; color: #c5e9da; background: linear-gradient(90deg, transparent, #0a223ac9 22% 78%, transparent); white-space: nowrap; }
+.combat-banner strong { font: 500 15px/1.2 Georgia, "Times New Roman", serif; letter-spacing: .015em; text-shadow: 0 0 12px #80d6c080; }
+.combat-banner small { color: #9cbab2; font-size: 9px; line-height: 1.2; }
+.combat-banner.tone-ember strong { color: #f7c5a0; text-shadow: 0 0 12px #ee9e7050; }
+.combat-banner.tone-glass strong { color: #e1d0fc; text-shadow: 0 0 12px #c1a4f550; }
+.combat-scene-label { position: absolute; z-index: 1; top: 14px; left: 50%; transform: translateX(-50%); color: #a9c7b85c; font-size: 8px; letter-spacing: .22em; text-transform: uppercase; white-space: nowrap; }
+.combat-stage .foe-card:disabled { opacity: 1; filter: none; cursor: default; }
+.combat-stage .foe-acting .intent { color: #fff0ca; border-color: #f7c49a9c; box-shadow: 0 0 18px #efa87530; }
+.combat-stage .foe-acting .foe-art::after { border-color: #f5b18bc9; box-shadow: 0 0 18px #f1b28333; }
+.combat-stage .foe-acting .foe-name-row strong { color: #ffe0b7; }
+.combat-stage .foe-acted .intent { opacity: .35; }
+.combat-resolving .hand-card:disabled { cursor: wait; }
+.combat-stage[aria-busy="true"] .foe-card { cursor: default; }
+.combat-stage[aria-busy="true"] .target-label { visibility: hidden; }
+
+@keyframes navigator-breathe { 0%, 100% { transform: translateY(0) rotate(-.5deg); } 50% { transform: translateY(-2px) rotate(.6deg); } }
+@keyframes reef-breathe { 0%, 100% { transform: translateY(0) scaleY(1); } 50% { transform: translateY(-1px) scaleY(1.025); } }
+@keyframes creature-float { 0%, 100% { transform: translateY(0) rotate(-1deg); } 50% { transform: translateY(-6px) rotate(1.5deg); } }
+@keyframes current-sway { from { transform: rotate(-2deg); } to { transform: rotate(3deg); } }
+@keyframes lantern-glow { from { opacity: .7; } to { opacity: 1; } }
+@keyframes orbit-tilt { from { transform: rotate(-5deg); } to { transform: rotate(5deg); } }
+@keyframes target-water-ring { from { opacity: .5; box-shadow: 0 0 10px #9adcbb20; } to { opacity: 1; box-shadow: 0 0 19px #9adcbb60; } }
+
+@media (max-width: 1120px) and (min-width: 841px) {
+  .hero-slot { flex-basis: 25%; margin-left: 2%; }
+  .hero-figure { width: 150px; }
+  .combat-stage .foe-row { padding-right: 8px; gap: 5px; }
+  .combat-stage .foe-card { padding-left: 5px; padding-right: 5px; }
+}
+@media (max-width: 620px) {
+  .arena.combat-stage { height: 242px; min-height: 242px; }
+  .hero-slot { height: 189px; flex-basis: 25%; margin: 0 0 21px 1%; }
+  .hero-figure { width: 126px; height: 149px; max-width: 117%; }
+  .hero-caption, .hero-name { font-size: 10px; }
+  .hero-caption small { font-size: 6px; letter-spacing: .02em; margin-top: 3px; }
+  .hero-health { margin-top: 5px; height: 3px; }
+  .hero-stats { font-size: 8px; gap: 4px; margin-top: 4px; }
+  .hero-stats small { font-size: 7px; }
+  .combat-stage .foe-row { width: 72%; padding: 9px 6px 21px 3px; gap: 1px; }
+  .combat-stage .foe-card { height: 183px; flex-basis: 130px; width: 130px; padding: 26px 3px 0; }
+  .combat-stage .foe-art { flex-basis: 107px; height: 107px; }
+  .combat-stage .foe-name-row strong { font-size: 11px; }
+  .combat-stage .foe-health { margin-top: 6px; height: 3px; flex-basis: 3px; width: 87%; }
+  .combat-stage .foe-stats { width: 87%; font-size: 9px; }
+  .combat-stage .intent { top: 2px; padding: 4px 6px; font-size: 8px; gap: 4px; }
+  .combat-stage .intent > span { font-size: 10px; }
+  .combat-stage .foe-card.foe-boss { flex-basis: 190px; width: 190px; height: 190px; }
+  .combat-stage .foe-boss .foe-art { height: 114px; flex-basis: 114px; }
+  .combat-stage .foe-boss .foe-name-row strong { font-size: 12px; }
+  .combat-stage .target-label { bottom: -13px; font-size: 6px; padding: 2px 4px; }
+  .combat-stage .impact-number { top: 29%; right: 20%; font-size: 21px; }
+  .combat-stage .foe-card.defeated { padding-bottom: 34px; }
+  .combat-banner { top: 7px; gap: 2px; padding: 4px 12px; }
+  .combat-banner strong { font-size: 12px; }
+  .combat-banner small { font-size: 8px; }
+  .combat-scene-label { top: 13px; font-size: 6px; letter-spacing: .16em; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .combat-stage *, .combat-stage *::before, .combat-stage *::after { animation: none !important; }
+}
+.reduce-motion .combat-stage *, .reduce-motion .combat-stage *::before, .reduce-motion .combat-stage *::after { animation: none !important; }
