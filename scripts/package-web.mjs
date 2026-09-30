@@ -68,6 +68,7 @@ const files = [
   ...await runtimeFiles("src", ".js"),
   ...await runtimeFiles("assets/cards", ".webp"),
   ...await runtimeFiles("assets/characters", ".webp"),
+  ...await runtimeFiles("assets/scenes", ".webp"),
 ].sort();
 if (files.some((file) => /[\r\n]/.test(file))) throw new Error("Runtime filenames must not contain newlines.");
 try {

@@ -49,6 +49,8 @@ English is the default. Simplified Chinese is available from the in-game languag
 
 ## Combat presentation
 
+The main menu opens inside a painted, drowned observatory: a bronze celestial instrument, distant ruins, and the Chartkeeper on the steps. Drifting waterlight, fog, and plankton animate the scene. Continue, a new expedition, the journal, and settings sit directly over the environment; custom seeds live in a secondary dialog. Opening the app returns to this menu, with **Continue** restoring the last completed action. The background is an original generated painting shipped locally, with its prompt recorded in `assets/scenes/title-prompts.json`.
+
 All eleven cards have individual original AI-generated illustrations: copper and embers, turquoise currents, and violet glass. Open **Help → Card atlas** to browse the complete set and read each effect in English or Simplified Chinese. Images ship locally as WebP; the prompts and asset origins are recorded in [Asset provenance](assets/PROVENANCE.md).
 
 The Chartkeeper and six enemies use original transparent AI-generated paintings, with distinct silhouettes and materials. Open **Help → Field guide** to browse and enlarge each figure. Breathing, floating, casting, lunges, and recoil remain separate animation layers; the illustrations stand directly in the battlefield.

@@ -2,7 +2,7 @@
 
 ## Current policy
 
-The first playable slice uses no third-party game images, sounds, samples, or fonts. Scenery and effects are original SVG/CSS/Canvas work. The eleven card illustrations and seven transparent character paintings are AI-generated originals made for Triseal with the built-in image generation tool, using project-authored text prompts and the generated Thread Needle image as a style reference. Audio is synthesized at runtime with Web Audio oscillators and noise, without recordings or samples. The interface uses the system font stack. All shipped images are stored in this repository and load locally; there are no external asset hosts.
+The first playable slice uses no third-party game images, sounds, samples, or fonts. Battle scenery and effects are original SVG/CSS/Canvas work. The eleven card illustrations, seven transparent character paintings, and title-screen observatory painting are AI-generated originals made for Triseal with the built-in image generation tool. Cards and character portraits use project-authored text prompts and the generated Thread Needle image as a style reference; the title painting uses an original text prompt without image references. Audio is synthesized at runtime with Web Audio oscillators and noise, without recordings or samples. The interface uses the system font stack. All shipped images are stored in this repository and load locally; there are no external asset hosts.
 
 ## Shipped assets
 
@@ -17,3 +17,5 @@ The first playable slice uses no third-party game images, sounds, samples, or fo
 | Web Audio effects and ambience | Triseal project source | Original oscillator/noise synthesis authored in code | No audio samples or recordings | Original project work; title and commercial rights review remains before release |
 | System font stack | Player's operating system | Native installed fonts | No bundled font files | No font asset is redistributed |
 | Android launcher icon (`android/res/drawable/ic_launcher.xml`) | Triseal project source | Original Android vector drawing with three colored seals | Drawn from scratch in code; no external image inputs | Original project work |
+| Main menu observatory painting (`assets/scenes/title-observatory.webp`) | OpenAI built-in image generation, directed for Triseal, 2026-09-30 | Original 1672×941 landscape painting, exported to WebP quality 88; no content alterations | Original text prompt only, no image references. Exact prompt and source output recorded in `assets/scenes/title-prompts.json` | AI-generated project asset, not a third-party open-source art pack |
+| Main menu emblem, waterlight, drifting fog, plankton, and departure motion (`title-screen.css`, `src/main.js`) | Triseal project source | Original SVG emblem, CSS gradients and animation | Drawn and animated from scratch in code | Original project work |

@@ -1,0 +1,400 @@
+/* Original Triseal title composition: a quiet menu inside the drowned observatory. */
+body.title-mode { overflow: hidden; background: #071820; }
+body.title-mode #app { height: 100vh; height: 100dvh; min-height: 0; }
+
+.title-scene {
+  --title-inset: max(7.8vw, calc(env(safe-area-inset-left) + 24px));
+  --title-gold: #ead4a8;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  min-height: 0;
+  overflow: hidden;
+  background: #0a222b;
+  color: #e9e4d4;
+  -webkit-tap-highlight-color: transparent;
+}
+.title-backdrop {
+  position: absolute;
+  z-index: -4;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: 64% 50%;
+  pointer-events: none;
+  user-select: none;
+  transform: scale(1.025);
+  animation: title-water-drift 36s ease-in-out infinite alternate;
+}
+.title-scene::before {
+  content: "";
+  position: absolute;
+  z-index: -2;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(90deg, rgba(3, 13, 20, .62), rgba(3, 14, 20, .48) 24%, rgba(3, 14, 20, .19) 42%, transparent 63%);
+}
+.title-scene::after {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(1, 9, 16, .25), transparent 19% 78%, rgba(1, 10, 16, .45));
+}
+.title-atmosphere {
+  position: absolute;
+  z-index: -3;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(ellipse at 78% 34%, rgba(154, 243, 222, .13), transparent 27%);
+  animation: title-light-breath 9s ease-in-out infinite alternate;
+}
+.title-haze {
+  position: absolute;
+  z-index: -2;
+  left: 16%;
+  bottom: -14%;
+  width: 100%;
+  height: 49%;
+  border-radius: 50%;
+  pointer-events: none;
+  opacity: .26;
+  background: radial-gradient(ellipse, rgba(69, 140, 151, .4), rgba(69, 140, 151, .1) 43%, transparent 67%);
+  animation: title-fog-drift 25s ease-in-out infinite alternate;
+}
+.title-haze-far {
+  left: 29%;
+  bottom: 27%;
+  width: 75%;
+  height: 34%;
+  opacity: .13;
+  animation-duration: 34s;
+  animation-delay: -19s;
+  animation-direction: alternate-reverse;
+}
+.title-motes { position: absolute; z-index: 0; inset: 0; overflow: hidden; pointer-events: none; }
+.title-motes i {
+  position: absolute;
+  left: var(--x);
+  top: var(--y);
+  width: 2px;
+  height: 2px;
+  border-radius: 50%;
+  background: #c5e9db;
+  opacity: 0;
+  box-shadow: 0 0 7px 1px rgba(124, 213, 203, .6);
+  animation: title-mote-rise var(--duration, 15s) linear infinite;
+  animation-delay: var(--delay, 0s);
+}
+.title-motes i:nth-child(3n) { width: 1px; height: 1px; background: #efcd99; }
+
+.title-topline {
+  position: absolute;
+  z-index: 2;
+  top: max(24px, calc(env(safe-area-inset-top) + 12px));
+  left: var(--title-inset);
+  right: max(3.2vw, calc(env(safe-area-inset-right) + 14px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  color: #b7c7bb;
+  font-size: 9px;
+  line-height: 1.4;
+  letter-spacing: .25em;
+  text-transform: uppercase;
+  text-shadow: 0 1px 5px #031019;
+}
+.title-topline > span { opacity: .72; }
+.title-topline .title-language {
+  min-width: 44px;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #e2dec9;
+  font-size: 11px;
+  letter-spacing: .07em;
+  text-shadow: 0 1px 5px #031019;
+  cursor: pointer;
+}
+.title-topline .title-language:hover { color: #fff0cb; background: transparent; }
+.title-content {
+  position: absolute;
+  z-index: 2;
+  left: var(--title-inset);
+  top: 49%;
+  width: min(40vw, 550px);
+  transform: translateY(-45%);
+  animation: title-content-arrive 1s cubic-bezier(.2, .7, .2, 1) both;
+}
+.title-emblem {
+  display: block;
+  width: 66px;
+  height: 35px;
+  margin: 0 0 17px 5px;
+  color: #d8be87;
+  opacity: .85;
+}
+.title-emblem svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.title-logo {
+  width: max-content;
+  margin: 0 0 0 -4px;
+  font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, "Times New Roman", serif;
+  font-size: clamp(64px, 7.3vw, 110px);
+  font-weight: 400;
+  line-height: .94;
+  letter-spacing: .09em;
+  color: #f4e8ca;
+  text-shadow: 0 2px 4px rgba(4, 11, 17, .8), 0 0 36px rgba(216, 188, 130, .15);
+}
+.title-subtitle {
+  margin: 16px 0 0 3px;
+  color: #c6c1aa;
+  font-family: Georgia, "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.55;
+  letter-spacing: .22em;
+  text-shadow: 0 2px 5px #03121c;
+}
+html[lang="zh-Hans"] .title-subtitle { letter-spacing: .48em; }
+.title-menu { display: grid; justify-items: start; gap: 4px; margin-top: clamp(31px, 5vh, 48px); }
+.title-menu-item {
+  position: relative;
+  display: grid;
+  grid-template-columns: 15px minmax(0, 1fr);
+  column-gap: 14px;
+  align-content: center;
+  align-items: center;
+  min-width: 210px;
+  max-width: 100%;
+  min-height: 48px;
+  padding: 8px 34px 8px 2px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #c4ccbf;
+  font-family: Georgia, "Songti SC", "Noto Serif CJK SC", serif;
+  font-size: 20px;
+  line-height: 1.25;
+  letter-spacing: .04em;
+  text-align: left;
+  text-shadow: 0 2px 5px #03111a;
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: color .2s, transform .2s;
+}
+.title-menu-item::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  bottom: 4px;
+  left: -18px;
+  width: calc(100% + 28px);
+  z-index: -1;
+  background: linear-gradient(90deg, transparent, rgba(211, 182, 119, .085) 18%, rgba(211, 182, 119, .02) 75%, transparent);
+  opacity: 0;
+  transition: opacity .2s;
+}
+.title-menu-item::after {
+  content: "";
+  position: absolute;
+  left: -21px;
+  top: 50%;
+  width: 15px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #efd09a);
+  opacity: 0;
+  transform: scaleX(.4);
+  transform-origin: right;
+  transition: opacity .2s, transform .2s;
+}
+.title-menu-mark {
+  display: block;
+  justify-self: center;
+  width: 5px;
+  height: 5px;
+  font-size: 0;
+  line-height: 0;
+  border: 1px solid #8d9e90;
+  background: transparent;
+  transform: rotate(45deg);
+  opacity: .7;
+  transition: background .2s, border-color .2s, box-shadow .2s;
+}
+.title-menu-label { grid-column: 2; }
+.title-menu-item.is-primary { color: #f4dfb0; }
+.title-menu-item.is-primary .title-menu-mark { border-color: #edd09b; background: #dec38e; opacity: 1; box-shadow: 0 0 9px rgba(225, 192, 122, .55); }
+.title-menu-item:hover, .title-menu-item:focus-visible { color: #fff0c9; transform: translateX(5px); }
+.title-menu-item:hover::before, .title-menu-item:focus-visible::before,
+.title-menu-item:hover::after, .title-menu-item:focus-visible::after { opacity: 1; transform: scaleX(1); }
+.title-menu-item:hover .title-menu-mark, .title-menu-item:focus-visible .title-menu-mark { background: #efd29a; border-color: #efd29a; box-shadow: 0 0 10px rgba(244, 204, 126, .6); }
+.title-menu-item:focus-visible { outline: 1px solid rgba(237, 208, 155, .55); outline-offset: 4px; }
+.title-menu-item:active { transform: translateX(7px); color: white; }
+.title-save-detail {
+  display: block;
+  grid-column: 2;
+  margin-top: 4px;
+  color: #9aafa5;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+  font-size: 9px;
+  line-height: 1.35;
+  letter-spacing: .04em;
+}
+.title-footer {
+  position: absolute;
+  z-index: 2;
+  left: var(--title-inset);
+  right: max(3.2vw, calc(env(safe-area-inset-right) + 14px));
+  bottom: max(18px, calc(env(safe-area-inset-bottom) + 7px));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  color: #a6b5a9;
+  font-size: 9px;
+  line-height: 1.5;
+  letter-spacing: .09em;
+  text-shadow: 0 1px 5px #031019;
+}
+.title-footer > span { opacity: .65; }
+.title-seed-link {
+  min-height: 44px;
+  margin-right: -10px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  color: #c5ccba;
+  font-size: 10px;
+  line-height: 1.4;
+  letter-spacing: .04em;
+  text-shadow: 0 1px 5px #031019;
+  cursor: pointer;
+}
+.title-seed-link:hover { color: #f0d7a5; }
+
+/* The departure is short and happens only after a menu action. */
+body.title-mode #app::after {
+  content: "";
+  position: absolute;
+  z-index: 110;
+  inset: 0;
+  background: #061219;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .32s ease-in;
+}
+body.title-mode #app.is-departing::after { opacity: 1; }
+body.title-mode #app.is-departing .title-scene { pointer-events: none; }
+
+/* Secondary choices sit in a restrained in-world dialog. */
+.title-mode .modal-scrim { background: rgba(1, 10, 16, .58); backdrop-filter: blur(5px); }
+.title-mode .modal-card {
+  border-color: rgba(194, 175, 131, .34);
+  border-radius: 3px;
+  background: linear-gradient(145deg, rgba(14, 36, 42, .98), rgba(5, 20, 27, .98));
+  box-shadow: 0 24px 90px rgba(0, 5, 10, .55), inset 0 1px rgba(230, 208, 164, .08);
+}
+.title-mode .modal-card h2 { color: #ead9b7; }
+.title-mode .modal-close { border: 0; border-radius: 0; background: none; color: #ccb990; }
+.title-expedition-modal { width: min(100%, 470px); }
+.title-expedition-copy { margin: -5px 0 22px; color: #a6b8ae; font-size: 12px; line-height: 1.7; }
+.title-expedition-form { display: grid; gap: 8px; }
+.title-expedition-form label { color: #c4ccb9; font-size: 11px; letter-spacing: .06em; }
+.title-expedition-form input {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border: 1px solid rgba(174, 192, 166, .25);
+  border-radius: 2px;
+  background: rgba(0, 10, 16, .45);
+  color: #f0e1c4;
+  font-size: 13px;
+}
+.title-expedition-form input::placeholder { color: #708e86; }
+.title-expedition-form input:focus { border-color: #b8c9ab; }
+.title-seed-hint { color: #849e94; font-size: 10px; line-height: 1.5; }
+.title-overwrite-warning { margin: 8px 0 2px; padding-left: 12px; border-left: 1px solid #bd9561; color: #dfbc92; font-size: 11px; line-height: 1.6; }
+.title-expedition-actions { display: flex; justify-content: flex-end; gap: 12px; margin-top: 16px; }
+.title-expedition-actions .button { min-height: 44px; border-radius: 2px; font-size: 11px; }
+.title-expedition-actions .button-primary { color: #172925; background: linear-gradient(105deg, #d4c8a1, #e1d5b2); box-shadow: none; }
+.title-expedition-actions .button-quiet { border-color: transparent; background: transparent; color: #a7baae; }
+
+@keyframes title-water-drift { from { transform: scale(1.025) translate3d(.2%, .15%, 0); } to { transform: scale(1.045) translate3d(-.35%, -.2%, 0); } }
+@keyframes title-light-breath { from { opacity: .45; } to { opacity: 1; } }
+@keyframes title-fog-drift { from { transform: translate3d(-5%, 4%, 0) scale(.98); } to { transform: translate3d(5%, -4%, 0) scale(1.06); } }
+@keyframes title-mote-rise { 0% { opacity: 0; transform: translate3d(0, 20px, 0); } 18%, 70% { opacity: .62; } 100% { opacity: 0; transform: translate3d(22px, -75px, 0); } }
+@keyframes title-content-arrive { from { opacity: 0; translate: 0 9px; } to { opacity: 1; translate: 0 0; } }
+
+@media (max-height: 600px) and (orientation: landscape) {
+  .title-scene { --title-inset: max(7vw, calc(env(safe-area-inset-left) + 17px)); }
+  .title-backdrop { object-position: 65% 53%; }
+  .title-topline { top: max(3px, env(safe-area-inset-top)); font-size: 8px; letter-spacing: .18em; }
+  .title-topline .title-language { font-size: 10px; }
+  .title-content { top: 49%; width: 42vw; transform: translateY(-44%); }
+  .title-emblem { width: 46px; height: 24px; margin: 0 0 7px 3px; }
+  .title-logo { margin-left: -2px; font-size: clamp(46px, 6.9vw, 74px); letter-spacing: .075em; }
+  .title-subtitle { margin-top: 9px; margin-left: 1px; font-size: 9px; line-height: 1.4; letter-spacing: .2em; }
+  .title-menu { margin-top: 17px; gap: 0; }
+  .title-menu-item { grid-template-columns: 11px minmax(0, 1fr); column-gap: 11px; min-height: 44px; min-width: 190px; padding: 7px 25px 7px 0; font-size: 17px; }
+  .title-menu-mark { width: 4px; height: 4px; }
+  .title-save-detail { margin-top: 3px; font-size: 8px; }
+  .title-footer { bottom: max(1px, env(safe-area-inset-bottom)); font-size: 8px; letter-spacing: .04em; }
+  .title-seed-link { font-size: 9px; }
+  .title-mode .modal-card { max-height: calc(100dvh - 24px); border-radius: 3px; }
+  .title-expedition-copy { margin-bottom: 15px; font-size: 11px; }
+  .title-expedition-modal h2 { margin-bottom: 14px; }
+}
+
+@media (max-height: 410px) and (orientation: landscape) {
+  .title-content { top: 47%; transform: translateY(-43%); }
+  .title-emblem { width: 38px; height: 20px; margin-bottom: 6px; }
+  .title-logo { font-size: clamp(43px, 6.4vw, 57px); }
+  .title-subtitle { margin-top: 7px; font-size: 8px; }
+  .title-menu { margin-top: 12px; }
+  .title-menu-item { min-height: 44px; padding-top: 5px; padding-bottom: 5px; font-size: 16px; }
+  .title-footer > span { max-width: 50%; }
+}
+
+@media (max-height: 340px) and (orientation: landscape) {
+  .title-content { top: 45%; }
+  .title-emblem { display: none; }
+  .title-logo { font-size: 40px; }
+  .title-subtitle { margin-top: 5px; }
+  .title-menu { margin-top: 7px; }
+  .title-menu-item { min-height: 40px; font-size: 15px; }
+  .title-save-detail { font-size: 7px; }
+}
+
+@media (orientation: portrait) {
+  .title-content { width: 82vw; }
+  .title-logo { font-size: clamp(48px, 13vw, 84px); }
+  .title-backdrop { object-position: 65% 50%; }
+  .title-scene::before { background: linear-gradient(90deg, rgba(3, 13, 20, .73), rgba(3, 14, 20, .5) 40%, rgba(3, 14, 20, .12)); }
+  .title-footer > span { max-width: 55%; }
+}
+
+@media (hover: none) {
+  .title-menu-item:hover { transform: none; }
+  .title-menu-item:active { transform: translateX(4px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .title-backdrop, .title-atmosphere, .title-haze, .title-motes i, .title-content { animation: none; }
+  .title-content { opacity: 1; }
+  .title-motes i { opacity: .35; }
+  .title-menu-item, .title-menu-item::before, .title-menu-item::after, .title-menu-mark, body.title-mode #app::after { transition: none; }
+}
+.reduce-motion .title-backdrop, .reduce-motion .title-atmosphere, .reduce-motion .title-haze,
+.reduce-motion .title-motes i, .reduce-motion .title-content { animation: none; }
+.reduce-motion .title-content { opacity: 1; }
+.reduce-motion .title-motes i { opacity: .35; }
+.reduce-motion .title-menu-item, .reduce-motion .title-menu-item::before, .reduce-motion .title-menu-item::after,
+.reduce-motion .title-menu-mark, body.title-mode.reduce-motion #app::after { transition: none; }

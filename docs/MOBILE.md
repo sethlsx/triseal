@@ -78,6 +78,7 @@ The package includes only:
 - `src/*.js` (one directory level).
 - `assets/cards/*.webp`.
 - `assets/characters/*.webp`.
+- `assets/scenes/*.webp`.
 - Generated `bundle-version.json`.
 
 All selected inputs must be regular files and their parent directories must be real directories. Symbolic links are rejected. Filenames containing newlines are rejected before they reach `zip`. The command uses argument arrays rather than shell interpolation. Input ordering and ZIP file timestamps are fixed for a given commit.
