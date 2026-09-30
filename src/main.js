@@ -1,5 +1,7 @@
 import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js";
 import { activateAudio, playSound, setSoundEnabled, setMusicEnabled, setVolume, suspendAudio, resumeAudio } from "./audio.js";
+import { renderCombatant } from "./combat-art.js";
+import { animateAttack, animateImpact, animateWake, animateDiscard, animateDeal } from "./combat-motion.js";
 
 const SAVE_KEY = "spindlewake.save.v1";
 const MAX_HAND = 10;
@@ -25,7 +27,7 @@ function loadState() {
 }
 
 const state = loadState();
-const ui = { modal: null, pendingCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, cardFx: null };
+const ui = { modal: null, pendingCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, cardFx: null, phase: null, enemyTurn: false, activeEnemy: null, resolvedEnemies: [] };
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music);
 setVolume(state.volume);
@@ -151,7 +153,7 @@ function drawCards(run, amount) {
 
 function addGuard(run, amount) {
   run.fight.guard += amount;
-  if (ui.cardFx) ui.cardFx.guard = true;
+  if (ui.cardFx) ui.cardFx.guard += amount;
   event("logGuard", { n: amount });
   playSound("guard");
 }
@@ -170,18 +172,20 @@ function damageEnemy(run, index, amount) {
   const enemy = run.fight.enemies[index];
   if (!enemy || enemy.hp <= 0) return 0;
   let remainder = amount;
+  let absorbed = 0;
   if (enemy.guard > 0) {
-    const absorbed = Math.min(enemy.guard, remainder);
+    absorbed = Math.min(enemy.guard, remainder);
     enemy.guard -= absorbed;
     remainder -= absorbed;
   }
   const dealt = Math.min(enemy.hp, remainder);
   enemy.hp -= dealt;
-  if (dealt > 0 && ui.cardFx) {
+  if ((dealt > 0 || absorbed > 0) && ui.cardFx) {
     const hit = ui.cardFx.hits.find((entry) => entry.index === index);
-    if (hit) hit.amount += dealt;
-    else ui.cardFx.hits.push({ index, amount: dealt });
+    if (hit) { hit.amount += dealt; hit.blocked += absorbed; }
+    else ui.cardFx.hits.push({ index, amount: dealt, blocked: absorbed });
   }
+  if (absorbed > 0) event("logBlocked", { name: enemyName(enemy), n: absorbed });
   if (dealt > 0) event("logDamage", { name: enemyName(enemy), n: dealt });
   playSound("hit");
   if (enemy.hp <= 0) event("logEnemyDown", { name: enemyName(enemy) });
@@ -230,7 +234,6 @@ function noteSigil(run, sigil) {
   if (!fight.wakeUsed && !fight.resonance && fight.sigils.length >= 2) {
     triggerResonance(run, fight.sigils.slice(0, 2));
   }
-  if (fight.sigils.length === 3) triggerWake(run);
 }
 
 function startRun(seedValue) {
@@ -248,6 +251,7 @@ function startRun(seedValue) {
   saveState();
   playSound("play");
   render();
+  introduceEncounter();
 }
 
 function makeSeedFromForm() {
@@ -300,7 +304,6 @@ function applyCard(run, cardId, targetIndex) {
     default:
       break;
   }
-  noteSigil(run, card.sigil);
   if (fight.enemies[targetIndex]?.hp <= 0) {
     ui.selectedEnemy = Math.max(0, fight.enemies.findIndex((foe) => foe.hp > 0));
   }
@@ -328,20 +331,92 @@ function checkVictory() {
   const run = state.run;
   if (!run.fight.enemies.every((enemy) => enemy.hp <= 0)) return false;
   run.fightsWon += 1;
-  if (run.stage >= 3) finishRun(true);
+  if (run.stage >= 3 || run.encounterId === "boss") finishRun(true);
   else beginReward();
   return true;
 }
 
-function animatePlayedCard(index, targetIndex, card) {
-  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  if (state.motion || prefersReducedMotion) return Promise.resolve();
+function motionOptions() {
+  return { reduced: state.motion || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches || document.hidden };
+}
+
+function freshEffects() {
+  return { hits: [], drawnIndices: [], wake: false, guard: 0 };
+}
+
+function heroFigure() {
+  return app.querySelector('[data-combatant="hero"]');
+}
+
+function enemyFigure(index) {
+  return app.querySelector(`[data-enemy-index="${index}"] [data-combatant="enemy"]`);
+}
+
+function combatBeat(duration) {
+  return new Promise((resolve) => setTimeout(resolve, motionOptions().reduced ? Math.min(duration, 100) : duration));
+}
+
+function introduceEncounter() {
+  if (state.screen !== "battle") return;
+  resolveBattleAction(async () => {
+    showCombatPhase(tr("turnTitle"), getEncounterTitle());
+    await animateDeal([...app.querySelectorAll(".hand-card")], motionOptions());
+    await combatBeat(180);
+  });
+}
+
+function showCombatPhase(title, detail = "", tone = "tide") {
+  ui.phase = { title, detail, tone };
+  render();
+}
+
+// Save only at action boundaries. Reloading during a sequence restores the last
+// complete action, so no enemy can attack twice or leave a half-resolved turn.
+async function resolveBattleAction(action) {
+  if (ui.animating) return;
+  const before = JSON.stringify(state.run);
+  const beforeScreen = state.screen;
+  const focus = document.activeElement?.dataset?.focus;
+  ui.animating = true;
+  try {
+    await action();
+  } catch (error) {
+    state.run = JSON.parse(before);
+    state.screen = beforeScreen;
+    ui.notice = tr("actionInterrupted");
+    console.error("Combat sequence interrupted", error);
+  } finally {
+    ui.animating = false;
+    ui.cardFx = null;
+    ui.phase = null;
+    ui.enemyTurn = false;
+    ui.activeEnemy = null;
+    ui.resolvedEnemies = [];
+    ui.focusAfterRender = focus;
+    saveState();
+    render();
+  }
+}
+
+async function presentCardEffects(tone) {
+  const fx = ui.cardFx;
+  render();
+  const effects = fx.hits.map((hit) => animateImpact(enemyFigure(hit.index), {
+    damage: hit.amount, blocked: hit.blocked, tone,
+    defeated: state.run.fight.enemies[hit.index].hp <= 0, ...motionOptions(),
+  }));
+  if (fx.guard > 0) effects.push(animateImpact(heroFigure(), { guard: fx.guard, tone: "tide", ...motionOptions() }));
+  if (fx.drawnIndices.length) effects.push(animateDeal(fx.drawnIndices.map((index) => app.querySelector(`[data-card-index="${index}"]`)), motionOptions()));
+  await Promise.all(effects);
+  ui.cardFx = null;
+}
+
+function animatePlayedCard(index) {
+  if (motionOptions().reduced) return Promise.resolve();
 
   const source = app.querySelector(`.hand-card[data-card-index="${index}"]`);
   const arena = app.querySelector(".arena");
-  const target = card.target
-    ? app.querySelector(`.foe-card[data-enemy-index="${targetIndex}"]`) || arena
-    : arena;
+  const target = heroFigure() || arena;
   if (!source || !target || typeof source.animate !== "function") return Promise.resolve();
 
   const from = source.getBoundingClientRect();
@@ -371,7 +446,7 @@ function animatePlayedCard(index, targetIndex, card) {
     { offset: 0.48, opacity: 1, transform: `translate3d(${dx * 0.48}px, ${dy * 0.48 - 62}px, 0) rotateY(12deg) rotate(${tilt}deg) scale(1.12)`, easing: "cubic-bezier(.2,.7,.25,1)" },
     { offset: 0.76, opacity: 1, transform: `translate3d(${dx * 0.82}px, ${dy * 0.82}px, 0) rotateY(-7deg) rotate(${-tilt * 0.5}deg) scale(1.04)` },
     { offset: 1, opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(.28)` },
-  ], { duration: 470, easing: "cubic-bezier(.22,.72,.25,1)", fill: "both" });
+  ], { duration: 300, easing: "cubic-bezier(.22,.72,.25,1)", fill: "both" });
   return flight.finished.catch(() => {}).finally(() => {
     source.classList.remove("card-launching");
     ghost.remove();
@@ -411,79 +486,112 @@ async function playCard(index, targetIndex = null) {
 
   ui.pendingCard = null;
   ui.notice = "";
-  ui.animating = true;
-  ui.cardFx = { hits: [], drawnIndices: [], wake: false, guard: false };
-  playSound("play");
-  try {
-    await animatePlayedCard(index, targetIndex, card);
-  } finally {
-    ui.animating = false;
-  }
-  if (state.run !== run || state.screen !== "battle") {
-    ui.cardFx = null;
-    return;
-  }
+  await resolveBattleAction(async () => {
+    showCombatPhase(cardName(cardId), tr(SIGIL_NAME[card.sigil][state.locale]), card.sigil);
+    playSound("play");
+    await animatePlayedCard(index);
+    if (DAMAGE_CARD_TYPES.has(card.type)) {
+      const targets = card.target ? [targetIndex] : alive.map(({ enemyIndex }) => enemyIndex);
+      await Promise.all(targets.map((index) => animateAttack(heroFigure(), enemyFigure(index), { tone: card.sigil, ...motionOptions() })));
+    }
+    ui.cardFx = freshEffects();
+    fight.energy -= card.cost;
+    fight.hand.splice(index, 1);
+    applyCard(run, cardId, targetIndex);
+    fight.discardPile.push(cardId);
+    await presentCardEffects(card.sigil);
 
-  fight.energy -= card.cost;
-  fight.hand.splice(index, 1);
-  applyCard(run, cardId, targetIndex);
-  fight.discardPile.push(cardId);
-  ui.pendingCard = null;
-  ui.notice = "";
-  checkVictory();
-  saveState();
-  render();
+    ui.cardFx = freshEffects();
+    noteSigil(run, card.sigil);
+    if (fight.sigils.length === 3 && !fight.wakeUsed) {
+      showCombatPhase(tr("wakeTitle"), tr("wakeEffect"), "glass");
+      await animateWake(app.querySelector(".combat-stage"), motionOptions());
+      triggerWake(run);
+      await presentCardEffects("glass");
+    } else if (ui.cardFx.resonance) {
+      const key = ui.cardFx.resonance;
+      showCombatPhase(tr(`resonance${key[0].toUpperCase()}${key.slice(1)}Title`), tr(`resonance${key[0].toUpperCase()}${key.slice(1)}Effect`), card.sigil);
+      await presentCardEffects(card.sigil);
+      await combatBeat(240);
+    }
+    checkVictory();
+  });
 }
 
-function enemyTurn() {
+async function enemyTurn() {
   const run = state.run;
   const fight = run.fight;
+  ui.enemyTurn = true;
+  showCombatPhase(tr("enemyTurn"), tr("enemiesActing"), "ember");
+  await animateDiscard([...app.querySelectorAll(".hand-card")], motionOptions());
   fight.discardPile.push(...fight.hand);
   fight.hand = [];
-  for (const enemy of fight.enemies) {
+  render();
+  await combatBeat(200);
+  for (const [index, enemy] of fight.enemies.entries()) {
     if (enemy.hp <= 0) continue;
     const intent = currentIntent(enemy);
+    const key = intent.type === "attack" ? "intentAttack" : intent.type === "brace" ? "intentBrace" : "intentCharge";
+    ui.activeEnemy = index;
+    showCombatPhase(enemyName(enemy), tr(key, { n: intent.value }), intent.type === "attack" ? "ember" : "tide");
+    await combatBeat(180);
     enemy.guard = 0;
     if (intent.type === "attack") {
+      await animateAttack(enemyFigure(index), heroFigure(), { enemy: true, tone: "ember", ...motionOptions() });
       const blocked = Math.min(fight.guard, intent.value);
       fight.guard -= blocked;
       const dealt = intent.value - blocked;
+      const hpLost = Math.min(run.hp, dealt);
       run.hp = Math.max(0, run.hp - dealt);
       event("logEnemyAttack", { name: enemyName(enemy), n: dealt });
-      if (dealt > 0) playSound("hit");
+      if (blocked > 0) event("logBlocked", { name: tr("chartkeeper"), n: blocked });
+      playSound(dealt > 0 ? "hit" : "guard");
+      ui.resolvedEnemies.push(index);
+      render();
+      await animateImpact(heroFigure(), { damage: hpLost, blocked, defeated: run.hp <= 0, ...motionOptions() });
     } else if (intent.type === "brace") {
       enemy.guard = intent.value;
       event("logEnemyBrace", { name: enemyName(enemy), n: intent.value });
       playSound("guard");
+      ui.resolvedEnemies.push(index);
+      render();
+      await animateImpact(enemyFigure(index), { guard: intent.value, tone: "tide", ...motionOptions() });
     } else if (intent.type === "charge") {
       enemy.power += intent.value;
       event("logEnemyCharge", { name: enemyName(enemy), n: intent.value });
       playSound("select");
+      ui.resolvedEnemies.push(index);
+      render();
+      await animateImpact(enemyFigure(index), { power: intent.value, tone: "glass", ...motionOptions() });
     }
     enemy.intentIndex = (enemy.intentIndex + 1) % ENEMIES[enemy.id].pattern.length;
+    ui.activeEnemy = null;
     if (run.hp <= 0) break;
   }
   fight.guard = 0;
   if (run.hp <= 0) {
     finishRun(false);
-    render();
     return;
   }
+  ui.resolvedEnemies = [];
+  ui.enemyTurn = false;
+  ui.cardFx = freshEffects();
   beginTurn(run);
-  saveState();
-  render();
+  showCombatPhase(tr("turnTitle"), tr("turn", { turn: fight.turn }), "tide");
+  await animateDeal([...app.querySelectorAll(".hand-card")], motionOptions());
+  await combatBeat(240);
 }
 
 function endTurn() {
-  if (!state.run || state.screen !== "battle" || ui.modal) return;
+  if (!state.run || state.screen !== "battle" || ui.modal || ui.animating) return;
   ui.pendingCard = null;
   ui.notice = "";
-  enemyTurn();
+  resolveBattleAction(enemyTurn);
 }
 
-function reweave() {
+async function reweave() {
   const run = state.run;
-  if (!run || state.screen !== "battle" || ui.modal) return;
+  if (!run || state.screen !== "battle" || ui.modal || ui.animating) return;
   if (!run.reweaveAvailable) {
     ui.notice = tr("reweaveUsed");
     render();
@@ -494,17 +602,21 @@ function reweave() {
     render();
     return;
   }
-  const count = run.fight.hand.length;
-  run.fight.discardPile.push(...run.fight.hand);
-  run.fight.hand = [];
-  run.reweaveAvailable = false;
-  drawCards(run, count);
-  event("logReweave");
-  ui.pendingCard = null;
-  ui.notice = "";
-  playSound("wake");
-  saveState();
-  render();
+  await resolveBattleAction(async () => {
+    showCombatPhase(tr("reweave"));
+    await animateDiscard([...app.querySelectorAll(".hand-card")], motionOptions());
+    const count = run.fight.hand.length;
+    run.fight.discardPile.push(...run.fight.hand);
+    run.fight.hand = [];
+    run.reweaveAvailable = false;
+    ui.cardFx = freshEffects();
+    drawCards(run, count);
+    event("logReweave");
+    ui.pendingCard = null;
+    ui.notice = "";
+    playSound("wake");
+    await presentCardEffects("glass");
+  });
 }
 
 function chooseReward(cardId) {
@@ -518,10 +630,12 @@ function chooseReward(cardId) {
   if (run.stage === 1) state.screen = "route";
   else {
     run.hp = Math.min(run.maxHp, run.hp + 4);
+    run.stage = 3;
     makeEncounter(run, "boss");
   }
   saveState();
   render();
+  introduceEncounter();
 }
 
 function chooseRoute(routeId) {
@@ -535,12 +649,13 @@ function chooseRoute(routeId) {
   makeEncounter(run, routeId);
   saveState();
   render();
+  introduceEncounter();
 }
 
 function getIncomingDamage() {
   if (!state.run?.fight) return 0;
-  return state.run.fight.enemies.reduce((total, enemy) => {
-    if (enemy.hp <= 0) return total;
+  return state.run.fight.enemies.reduce((total, enemy, index) => {
+    if (enemy.hp <= 0 || ui.resolvedEnemies.includes(index)) return total;
     const intent = currentIntent(enemy);
     return total + (intent.type === "attack" ? intent.value : 0);
   }, 0);
@@ -575,7 +690,6 @@ function renderCard(cardId, options = {}) {
   const index = options.index;
   const disabled = options.playable && card.cost > state.run.fight.energy;
   const selected = options.selected ? "selected" : "";
-  const dealing = !options.reward && ui.cardFx?.drawnIndices.includes(index);
   const buttonAction = options.reward ? "choose-reward" : "play-card";
   const dataIndex = options.reward ? "" : `data-card-index="${index}"`;
   const dataId = options.reward ? `data-card-id="${cardId}"` : "";
@@ -583,7 +697,7 @@ function renderCard(cardId, options = {}) {
   const prismBonus = !options.reward && state.run?.fight?.prismReady && DAMAGE_CARD_TYPES.has(card.type);
   const previewText = prismBonus ? tr("prismCardPreview", { n: 3 }) : "";
   const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}${previewText ? ` ${previewText}` : ""}`;
-  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""} ${dealing ? "deal-in" : ""}" style="${dealing ? `--deal-order:${index}` : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
+  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
     <span class="card-topline"><span class="card-cost ${card.cost === 0 ? "free" : ""}">${card.cost}</span><span class="sigil-chip" title="${tr(sigilKey)}">${SIGIL_GLYPH[card.sigil]}</span></span>
     <span class="card-illustration" aria-hidden="true"><span>${card.glyph}</span><i></i>${prismBonus ? `<b class="prism-card-bonus">+3</b>` : ""}</span>
     <span class="card-title">${escapeHtml(lang.name)}</span>
@@ -688,23 +802,31 @@ function intentMarkup(enemy) {
 
 function renderEnemy(enemy, index) {
   const hit = ui.cardFx?.hits.find((entry) => entry.index === index);
-  if (enemy.hp <= 0) return `<div class="foe-card defeated ${hit ? "foe-defeated-hit" : ""}" aria-hidden="true"><span class="defeated-mark">×</span>${hit ? `<span class="impact-number">−${hit.amount}</span>` : ""}</div>`;
+  if (enemy.hp <= 0 && !hit) return `<div class="foe-card defeated" aria-hidden="true"><span class="defeated-mark">◇</span></div>`;
   const pending = ui.pendingCard !== null;
   const selected = ui.selectedEnemy === index;
   const intent = currentIntent(enemy);
   const guarding = enemy.guard > 0;
-  const portrait = enemy.id === "horizon" ? "◎" : enemy.id === "brineback" ? "◒" : enemy.id === "mirrorfin" ? "◁" : enemy.id === "bellwether" ? "♢" : enemy.id === "inkling" ? "∿" : "◌";
   const intentKey = intent.type === "attack" ? "intentAttack" : intent.type === "brace" ? "intentBrace" : "intentCharge";
   const label = `${enemyName(enemy)}, ${enemy.hp} / ${enemy.maxHp}. ${tr("currentFoe")}: ${tr(intentKey, { n: intent.value })}`;
-  return `<button type="button" class="foe-card ${pending ? "targetable" : ""} ${selected ? "foe-selected" : ""} ${enemy.id === "horizon" ? "foe-boss" : ""} ${hit ? "foe-hit" : ""}" data-action="select-foe" data-enemy-index="${index}" data-focus="foe-${index}" aria-label="${escapeHtml(label)}">
-    <span class="foe-art kind-${ENEMIES[enemy.id].kind}" aria-hidden="true"><i></i><b></b><em></em><strong>${portrait}</strong></span>
+  return `<button type="button" class="foe-card ${pending ? "targetable" : ""} ${selected ? "foe-selected" : ""} ${enemy.id === "horizon" ? "foe-boss" : ""} ${ui.activeEnemy === index ? "foe-acting" : ""} ${ui.resolvedEnemies.includes(index) ? "foe-acted" : ""}" data-action="select-foe" data-enemy-index="${index}" data-focus="foe-${index}" aria-label="${escapeHtml(label)}">
+    <span class="foe-art kind-${ENEMIES[enemy.id].kind}" data-combatant="enemy" aria-hidden="true">${renderCombatant(enemy.id)}</span>
     <span class="foe-name-row"><strong>${escapeHtml(enemyName(enemy))}</strong><small>${tr("enemyKind")}</small></span>
     <span class="foe-health"><i style="width:${Math.max(0, enemy.hp / enemy.maxHp * 100)}%"></i></span>
     <span class="foe-stats"><span>${enemy.hp} <small>/ ${enemy.maxHp}</small></span>${guarding ? `<span class="foe-guard">◒ ${enemy.guard}</span>` : ""}</span>
     ${intentMarkup(enemy)}
     ${pending ? `<span class="target-label">${selected ? tr("targetSelected") : tr("targetFoe")}</span>` : ""}
-    ${hit ? `<span class="impact-number" aria-hidden="true">−${hit.amount}</span>` : ""}
   </button>`;
+}
+
+function renderHero() {
+  const run = state.run;
+  return `<div class="hero-slot ${run.fight.guard > 0 ? "hero-guarded" : ""}">
+    <div class="hero-figure" data-combatant="hero" aria-hidden="true">${renderCombatant("hero")}<span class="hero-shield"></span></div>
+    <div class="hero-caption">${tr("chartkeeper")}</div>
+    <div class="hero-health" aria-label="${tr("hullFull", { current: run.hp, max: run.maxHp })}"><i style="width:${run.hp / run.maxHp * 100}%"></i></div>
+    <div class="hero-stats"><span>♥ ${run.hp} <small>/ ${run.maxHp}</small></span>${run.fight.guard > 0 ? `<span class="hero-guard">◒ ${run.fight.guard}</span>` : ""}</div>
+  </div>`;
 }
 
 function renderLog() {
@@ -721,27 +843,29 @@ function renderBattle() {
     index, playable: true, selected: targeting && ui.pendingCard === index,
   })).join("");
   const living = fight.enemies.filter((enemy) => enemy.hp > 0).length;
-  const notice = ui.notice || (targeting ? tr("targetHint") : tr("clickCardHint"));
-  return `<main class="game-scene battle-scene">
+  const notice = ui.notice || (ui.animating ? tr("resolving") : targeting ? tr("targetHint") : tr("clickCardHint"));
+  return `<main class="game-scene battle-scene ${ui.animating ? "combat-resolving" : ""}">
     <section class="battle-heading"><div><span class="section-eyebrow">${tr("chapter")} · ${tr("step", { n: run.stage })}</span><h1>${stepTitle}</h1></div><div class="turn-pill"><span class="live-dot"></span>${tr("turn", { turn: fight.turn })}</div></section>
     ${renderMetrics()}
     <div class="battle-grid">
       <section class="battle-main">
         <div class="arena-heading"><div><span class="section-eyebrow">${tr("enemyKind")}</span><span class="foe-count">${living} <small>${tr("currentFoe")}</small></span></div><span class="scene-coordinate">${String(run.stage).padStart(2, "0")} / 03</span></div>
-        <div class="arena ${run.encounterId === "boss" ? "arena-boss" : ""}"><div class="arena-glow" aria-hidden="true"></div><div class="arena-orbit" aria-hidden="true"><i></i><b></b></div><div class="foe-row">${fight.enemies.map(renderEnemy).join("")}</div><div class="arena-floor" aria-hidden="true"></div></div>
+        <div class="arena combat-stage ${run.encounterId === "boss" ? "arena-boss" : ""}"><div class="arena-glow" aria-hidden="true"></div><div class="arena-orbit" aria-hidden="true"><i></i><b></b></div>
+          ${ui.phase ? `<div class="combat-banner tone-${ui.phase.tone}" role="status"><strong>${ui.phase.title}</strong><small>${ui.phase.detail}</small></div>` : `<div class="combat-scene-label" aria-hidden="true">${tr("sceneLabel")}</div>`}
+          ${renderHero()}<div class="foe-row">${fight.enemies.map(renderEnemy).join("")}</div><div class="arena-floor" aria-hidden="true"></div></div>
         ${renderWake()}
       </section>
       <aside class="battle-side">
-        <div class="side-title"><span class="section-eyebrow">${tr("turnTitle")}</span><h2>${tr("turnHint")}</h2></div>
-        <div class="side-actions"><button type="button" class="button button-primary end-turn" data-action="end-turn" data-focus="end-turn">${tr("endTurn")} <span aria-hidden="true">↵</span></button>
+        <div class="side-title"><span class="section-eyebrow">${tr(ui.enemyTurn ? "enemyTurn" : "turnTitle")}</span><h2>${tr(ui.enemyTurn ? "enemiesActing" : "turnHint")}</h2></div>
+        <div class="side-actions"><button type="button" class="button button-primary end-turn" data-action="end-turn" data-focus="end-turn">${tr(ui.animating ? "resolving" : "endTurn")} <span aria-hidden="true">${ui.animating ? "···" : "↵"}</span></button>
           <button type="button" class="button button-quiet reweave-button" data-action="reweave" data-focus="reweave" ${run.reweaveAvailable && fight.hand.length > 0 ? "" : "disabled"}><span aria-hidden="true">⤨</span>${run.reweaveAvailable ? tr("reweave") : tr("reweaveUsed")}</button>
           <button type="button" class="deck-button" data-action="deck" data-focus="deck">▤ ${tr("deckPeek")} <span>${run.deck.length}</span></button>
         </div>
         ${renderLog()}
       </aside>
     </div>
-    <section class="hand-zone"><div class="hand-header"><div><span class="section-eyebrow">${tr("turnTitle")}</span><h2>${tr("clickCardHint")}</h2></div><div class="hand-piles"><span>${tr("drawPile")} <b>${fight.drawPile.length}</b></span><span>${tr("discardPile")} <b>${fight.discardPile.length}</b></span></div></div>
-      <div class="hand-cards">${handCards || `<div class="empty-hand">${tr("clickCardHint")}</div>`}</div>
+    <section class="hand-zone"><div class="hand-header"><div><span class="section-eyebrow">${tr(ui.enemyTurn ? "enemyTurn" : "turnTitle")}</span><h2>${tr(ui.animating ? "resolving" : "clickCardHint")}</h2></div><div class="hand-piles"><span>${tr("drawPile")} <b>${fight.drawPile.length}</b></span><span>${tr("discardPile")} <b>${fight.discardPile.length}</b></span></div></div>
+      <div class="hand-cards">${handCards || `<div class="empty-hand">${tr(ui.enemyTurn ? "enemiesActing" : "clickCardHint")}</div>`}</div>
       <div class="hand-footer"><span class="keyboard-hint">${notice}</span><span class="hand-limit">${fight.hand.length} / ${MAX_HAND}</span></div>
     </section>
   </main>`;
@@ -816,7 +940,7 @@ function render() {
         : state.screen === "summary" && state.run ? renderSummary()
           : renderHome();
   app.innerHTML = `${renderHeader()}${screen}${renderModal()}<div class="toast" role="status" aria-live="polite">${ui.notice}</div>`;
-  ui.cardFx = null;
+  if (ui.animating) app.querySelectorAll("button").forEach((button) => { button.disabled = true; });
   const focusTarget = ui.focusAfterRender || activeFocus;
   const focusElement = focusTarget ? app.querySelector(`[data-focus="${CSS.escape(focusTarget)}"]`) : null;
   if (focusElement) focusElement.focus({ preventScroll: true });
@@ -949,7 +1073,11 @@ app.addEventListener("input", (inputEvent) => {
 });
 
 window.addEventListener("keydown", (keyboardEvent) => {
-  if (ui.animating) { keyboardEvent.preventDefault(); return; }
+  if (keyboardEvent.metaKey || keyboardEvent.ctrlKey || keyboardEvent.altKey) return;
+  if (ui.animating) {
+    if (/^[1-5er]$/i.test(keyboardEvent.key) || ["Enter", " ", "Escape", "ArrowLeft", "ArrowRight"].includes(keyboardEvent.key)) keyboardEvent.preventDefault();
+    return;
+  }
   if (keyboardEvent.key === "Escape") {
     keyboardEvent.preventDefault();
     if (ui.modal) closeModal();
@@ -986,7 +1114,12 @@ window.addEventListener("keydown", (keyboardEvent) => {
 });
 
 document.addEventListener("visibilitychange", () => {
-  if (document.hidden) suspendAudio();
+  if (document.hidden) {
+    suspendAudio();
+    document.querySelectorAll(".flight-card").forEach((card) => card.getAnimations().forEach((animation) => {
+      try { animation.finish(); } catch { /* An idle animation has no end. */ }
+    }));
+  }
   else resumeAudio();
 });
 

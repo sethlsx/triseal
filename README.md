@@ -25,7 +25,8 @@ Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Re
 - Explain the central rule in the first minute, then leave room to master it.
 - Let the first two sigils create a tactical choice shaped by visible enemy intent; the third pays off with the Wake.
 - Make card order and enemy intent visible before the player commits.
-- Give each played card a curved flight into the arena, with a visible hit and a larger three-sigil Wake burst.
+- Stage combat around an original chartkeeper and six animated sea creatures. Cards fly to the caster, spells travel to their targets, and impact, blocked damage, shield gain, and defeat each have a visible cue.
+- Resolve enemies one at a time, with an action banner, anticipation, attack, and recovery. Discard the old hand and deal the next only after the enemy sequence finishes.
 - Keep early choices viable across several builds; random rewards should create variety without deciding the run by themselves.
 - Let a run fit a short session and resume after a tab is closed.
 - Treat animation, sound, reduced motion, keyboard control, and localization as part of the core experience.
@@ -33,6 +34,12 @@ Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Re
 ## Languages
 
 English is the default. Simplified Chinese is available from the in-game language control. Both translations live in the same localization dictionary so rules and tooltips stay in sync.
+
+## Combat presentation
+
+All character drawings and combat effects are original inline SVG, CSS, and Web Animations API work. No image or sound downloads are needed. **Reduce motion** in Settings (or the system preference) removes travel, shaking, and idle movement while preserving readable combat numbers.
+
+The game saves after complete player actions and enemy turns. If a tab closes during a sequence, reopening restores the last complete action. Controls unlock when the visible sequence finishes.
 
 ## Project notes
 
