@@ -8,3 +8,5 @@
 - New art and audio must be made from scratch or use assets with explicit licenses that allow the intended game use. Record every shipped asset and its source in `assets/PROVENANCE.md`.
 - Do not use Balatro, Slay the Spire, or other games' character art, card art, sound recordings, screen layouts, logos, names, or melodies. Study them only for broad design principles.
 - After each completed change round, commit and push this repository to GitHub, as requested by the user. Keep credentials, local save data, and build artifacts out of commits.
+- Android uses a persistent local web origin and versioned content bundles. Every push to main publishes the clean game and update feed to the generated `mobile-channel` branch through GitHub Actions. Keep the packaging allowlist current when adding runtime files. After pushing, report publication failure as pending rather than claiming phones can update.
+- Reuse the private Android signing key for future APKs; never commit it. Increment the native version code when changing the Android shell. Ordinary card, art, animation, and game changes ship through the content update feed and do not require a new APK.

@@ -1,0 +1,170 @@
+import { createHash } from "node:crypto";
+import { createReadStream } from "node:fs";
+import { cp, lstat, mkdir, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import { dirname, join, relative, resolve, sep } from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+
+// Ship runtime files only. Prompts, docs, keys, APKs, and source projects stay out.
+const root = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const distribution = join(root, "dist");
+const web = join(distribution, "web");
+const site = join(distribution, "site");
+const publicBase = "https://raw.githubusercontent.com/sethlsx/triseal/mobile-channel";
+
+function command(executable, args, options = {}) {
+  const result = spawnSync(executable, args, { cwd: root, encoding: "utf8", ...options });
+  if (result.error) throw result.error;
+  if (result.status !== 0) throw new Error(`${executable} failed: ${result.stderr || result.stdout}`);
+  return result.stdout.trim();
+}
+
+async function requireRegular(path, kind) {
+  const info = await lstat(path);
+  if (info.isSymbolicLink() || (kind === "directory" ? !info.isDirectory() : !info.isFile())) {
+    throw new Error(`Refusing non-${kind} path: ${relative(root, path)}`);
+  }
+}
+
+async function runtimeFiles(directory, extension) {
+  const parent = join(root, directory);
+  await requireRegular(parent, "directory");
+  const entries = await readdir(parent, { withFileTypes: true });
+  const paths = [];
+  for (const entry of entries) {
+    if (!entry.name.endsWith(extension)) continue;
+    const file = join(parent, entry.name);
+    await requireRegular(file, "file");
+    paths.push(relative(root, file).split(sep).join("/"));
+  }
+  return paths;
+}
+
+async function cleanOutput(path) {
+  try {
+    await requireRegular(path, "directory");
+  } catch (error) {
+    if (error.code !== "ENOENT") throw error;
+  }
+  await rm(path, { recursive: true, force: true });
+  await mkdir(path, { recursive: true });
+}
+
+const fullVersion = command("git", ["rev-parse", "HEAD"]);
+const sequence = Number(command("git", ["show", "-s", "--format=%ct", "HEAD"]));
+if (!/^[0-9a-f]{40}$/.test(fullVersion) || !Number.isSafeInteger(sequence) || sequence < 315532800) {
+  throw new Error("Cannot determine a valid Git commit and timestamp for this bundle.");
+}
+const version = fullVersion.slice(0, 7);
+const createdAt = new Date(sequence * 1000).toISOString();
+const bundleVersion = { schema: 1, version, sequence, minShellVersion: 1 };
+
+await requireRegular(root, "directory");
+await requireRegular(join(root, "index.html"), "file");
+await requireRegular(join(root, "assets"), "directory");
+const files = [
+  "index.html",
+  ...await runtimeFiles(".", ".css"),
+  ...await runtimeFiles("src", ".js"),
+  ...await runtimeFiles("assets/cards", ".webp"),
+  ...await runtimeFiles("assets/characters", ".webp"),
+].sort();
+if (files.some((file) => /[\r\n]/.test(file))) throw new Error("Runtime filenames must not contain newlines.");
+try {
+  await requireRegular(distribution, "directory");
+} catch (error) {
+  if (error.code !== "ENOENT") throw error;
+  await mkdir(distribution);
+}
+await cleanOutput(web);
+await cleanOutput(site);
+for (const file of files) {
+  const destination = join(web, file);
+  await mkdir(dirname(destination), { recursive: true });
+  await cp(join(root, file), destination, { dereference: false });
+  await utimes(destination, sequence, sequence);
+}
+await writeFile(join(web, "bundle-version.json"), `${JSON.stringify(bundleVersion, null, 2)}\n`);
+await utimes(join(web, "bundle-version.json"), sequence, sequence);
+await cp(web, site, { recursive: true });
+await mkdir(join(site, "updates"));
+const archiveName = `triseal-${fullVersion}.zip`;
+const archivePath = join(site, "updates", archiveName);
+command("zip", ["-X", "-q", "-9", archivePath, "-@"], {
+  cwd: web,
+  input: [...files, "bundle-version.json"].sort().join("\n") + "\n",
+  env: { ...process.env, TZ: "UTC" },
+});
+const digest = createHash("sha256");
+for await (const chunk of createReadStream(archivePath)) digest.update(chunk);
+const manifest = {
+  ...bundleVersion,
+  url: `${publicBase}/updates/${archiveName}`,
+  sha256: digest.digest("hex"),
+  bytes: (await lstat(archivePath)).size,
+  createdAt,
+};
+await writeFile(join(site, "mobile-update.json"), `${JSON.stringify(manifest, null, 2)}\n`);
+await writeFile(join(site, ".nojekyll"), "");
+await mkdir(join(site, "install"));
+await writeFile(join(site, "install", "index.html"), installPage(version));
+console.log(`Packaged Triseal ${version}: ${files.length} runtime files, ${(manifest.bytes / 1024 / 1024).toFixed(1)} MB update.`);
+console.log(`Android content: ${web}`);
+console.log(`Mobile channel: ${site}`);
+
+function installPage(contentVersion) {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#07151c" />
+  <meta name="description" content="Install Triseal for Android. An original card roguelite about weaving three sigils in a drowned observatory." />
+  <title>Triseal — Install for Android</title>
+  <style>
+    :root{color-scheme:dark;font-family:Georgia,"Times New Roman","Noto Serif SC",serif;color:#efeee2;background:#07151c}
+    *{box-sizing:border-box}body{margin:0;min-height:100svh;background:radial-gradient(ellipse at 75% 25%,#204c52 0,transparent 48%),linear-gradient(150deg,#06111a,#10272d 65%,#142321);padding:24px max(24px,env(safe-area-inset-right)) 30px max(24px,env(safe-area-inset-left))}
+    header,main,footer{max-width:980px;margin:auto}header{display:flex;align-items:center;justify-content:space-between;gap:24px;font:12px/1.5 system-ui,sans-serif;letter-spacing:.18em;color:#cbb788}button{font:inherit}header button{background:transparent;color:#dbe4da;border:1px solid #8aa59b66;border-radius:30px;padding:9px 16px;letter-spacing:0;cursor:pointer}
+    main{min-height:78svh;display:grid;grid-template-columns:1.2fr 1fr;align-items:center;gap:25px}.intro{position:relative;z-index:1}.eyebrow{font:11px/1.5 system-ui,sans-serif;letter-spacing:.2em;text-transform:uppercase;color:#b2cfca}h1{font-weight:400;font-size:clamp(56px,9vw,94px);letter-spacing:-.04em;line-height:1;margin:20px 0}h2{font-size:22px;font-weight:400;margin:0 0 18px;color:#d3b984}.lead{font:17px/1.65 system-ui,sans-serif;color:#c2d4d0;max-width:420px}.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center;margin:28px 0 23px}a{color:inherit}.download{background:#e0c693;color:#102126;text-decoration:none;padding:16px 23px;border-radius:5px;font:600 15px/1.2 system-ui,sans-serif;box-shadow:0 8px 30px #0004}.browser{font:14px/1.4 system-ui,sans-serif;text-underline-offset:5px;padding:10px 4px}.note{font:13px/1.6 system-ui,sans-serif;color:#9bb7b3;max-width:430px}.features{padding:0;list-style:none;max-width:450px;font:14px/1.65 system-ui,sans-serif;color:#c5d4ce}.features li{padding:8px 0 8px 22px;position:relative}.features li:before{content:"✧";position:absolute;left:0;color:#d3b984}.art{position:relative;height:510px;display:flex;align-items:center;justify-content:center}.art:before{content:"";position:absolute;width:340px;height:340px;border:1px solid #bba37144;border-radius:50%;box-shadow:0 0 0 25px #bba37108,0 0 0 26px #bba37122}.art img{position:relative;width:100%;height:100%;object-fit:contain;filter:drop-shadow(0 20px 24px #0009)}footer{border-top:1px solid #819f902b;padding:17px 0 0;display:flex;justify-content:space-between;gap:16px;font:11px/1.6 system-ui,sans-serif;color:#8aa29d}footer a{text-underline-offset:3px}
+    @media(max-width:640px){body{padding-top:18px}main{grid-template-columns:1fr;gap:0;position:relative;min-height:auto;padding:42px 0 24px}.intro{max-width:100%}.art{position:absolute;right:-16px;top:28px;width:170px;height:215px;opacity:.6;z-index:0;pointer-events:none}.art:before{width:150px;height:150px}.eyebrow{max-width:210px}h1{font-size:66px;margin:22px 0 26px}h2{font-size:20px;max-width:230px}.lead{padding-top:12px;max-width:100%;font-size:16px}.actions{gap:10px}.download{padding:16px 20px}footer{flex-wrap:wrap}}
+    @media(max-height:500px) and (orientation:landscape){main{min-height:auto;padding:20px 0;grid-template-columns:1.5fr 1fr}.art{height:310px}h1{font-size:60px;margin:12px 0}h2{margin-bottom:10px}.lead{font-size:15px}.actions{margin:18px 0}.features{font-size:12px}.features li{padding-top:3px;padding-bottom:3px}}
+  </style>
+</head>
+<body>
+  <header><span>TRISEAL · ANDROID</span><button id="language" type="button" aria-label="Switch to Simplified Chinese">中文</button></header>
+  <main>
+    <section class="intro">
+      <p class="eyebrow" data-copy="eyebrow">Three sigils. One rising tide.</p>
+      <h1>Triseal</h1>
+      <h2 data-copy="subtitle">Carry the drowned archive.</h2>
+      <p class="lead" data-copy="lead">A card roguelite for your pocket. Weave Ember, Tide, and Glass into a decisive wake. Play sideways, wherever you are.</p>
+      <div class="actions"><a class="download" href="https://github.com/sethlsx/triseal/releases/latest/download/triseal-android.apk" data-copy="download">Download Android APK</a><a class="browser" href="../" data-copy="browser">Play in browser ↗</a></div>
+      <p class="note" data-copy="install">Open the downloaded APK to install. Android may ask you to allow installations from your browser or file manager.</p>
+      <ul class="features">
+        <li data-copy="updates">New cards, art, and game changes download in the background when you open the game online. Apply an available update when you are ready; your turn is never interrupted.</li>
+        <li data-copy="offline">The installed game works offline and keeps your run on your phone.</li>
+        <li data-copy="shell">Install once for normal game updates. A new APK is only needed when the Android app itself changes.</li>
+      </ul>
+    </section>
+    <div class="art" aria-hidden="true"><img src="../assets/characters/hero.webp" alt="" /></div>
+  </main>
+  <footer><span><span data-copy="version">Live game version</span> · ${contentVersion}</span><a href="https://github.com/sethlsx/triseal" data-copy="source">Project on GitHub</a></footer>
+  <script>
+    const copy = {
+      en: {eyebrow:"Three sigils. One rising tide.",subtitle:"Carry the drowned archive.",lead:"A card roguelite for your pocket. Weave Ember, Tide, and Glass into a decisive wake. Play sideways, wherever you are.",download:"Download Android APK",browser:"Play in browser ↗",install:"Open the downloaded APK to install. Android may ask you to allow installations from your browser or file manager.",updates:"New cards, art, and game changes download in the background when you open the game online. Apply an available update when you are ready; your turn is never interrupted.",offline:"The installed game works offline and keeps your run on your phone.",shell:"Install once for normal game updates. A new APK is only needed when the Android app itself changes.",version:"Live game version",source:"Project on GitHub"},
+      zh: {eyebrow:"三道印记，一次唤潮。",subtitle:"把沉海档案装进口袋。",lead:"为手机横屏打造的卡牌冒险。交织余烬、潮流与琉璃，在沉海观测站中唤起你的浪潮。",download:"下载安卓安装包",browser:"直接用浏览器玩 ↗",install:"下载后打开 APK 安装。安卓可能会提示允许当前浏览器或文件管理器安装应用。",updates:"联网打开游戏时，新卡牌、美术和玩法会在后台下载。准备好后再点确认应用更新，不会打断正在进行的回合。",offline:"安装后可以离线游玩，进度保存在手机上。",shell:"日常游戏更新无需重新安装。只有安卓应用本身变化时，才需要下载新 APK。",version:"线上游戏版本",source:"查看 GitHub 项目"}
+    };
+    let language = "en";
+    document.getElementById("language").addEventListener("click", () => {
+      language = language === "en" ? "zh" : "en";
+      document.documentElement.lang = language === "en" ? "en" : "zh-Hans";
+      document.title = language === "en" ? "Triseal — Install for Android" : "三印唤潮 — 安卓下载";
+      document.querySelectorAll("[data-copy]").forEach((element) => { element.textContent = copy[language][element.dataset.copy]; });
+      const button = document.getElementById("language");
+      button.textContent = language === "en" ? "中文" : "English";
+      button.setAttribute("aria-label", language === "en" ? "Switch to Simplified Chinese" : "Switch to English");
+    });
+  </script>
+</body>
+</html>\n`;
+}

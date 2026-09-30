@@ -1,0 +1,49 @@
+name: Publish Android content updates
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: mobile-channel
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v6
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Package runtime files and update bundle
+        run: node scripts/package-web.mjs
+      - name: Publish clean content channel
+        shell: bash
+        run: |
+          set -euo pipefail
+          channel="$RUNNER_TEMP/triseal-mobile-channel"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin refs/heads/mobile-channel > /dev/null; then
+            git fetch --no-tags origin mobile-channel
+            git worktree add --detach "$channel" FETCH_HEAD
+          else
+            git worktree add --detach "$channel" HEAD
+            git -C "$channel" checkout --orphan mobile-channel
+          fi
+          find "$channel" -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf -- {} +
+          cp -a dist/site/. "$channel/"
+          git -C "$channel" add --all
+          if git -C "$channel" diff --cached --quiet; then
+            echo "Mobile content already published."
+            exit 0
+          fi
+          git -C "$channel" commit -m "Publish Triseal content ${GITHUB_SHA}"
+          git -C "$channel" push origin HEAD:refs/heads/mobile-channel

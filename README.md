@@ -10,6 +10,16 @@ The game takes place in a drowned observatory whose charts are woven from living
 
 ## Play
 
+### Android
+
+Download the [Android APK](https://github.com/sethlsx/triseal/releases/latest/download/triseal-android.apk) on your phone and install it once. Android 8.0 or later is required. The app opens in landscape and includes the full game for offline play.
+
+New game content downloads in the background when you open or resume the app online. A downloaded update is used on the next launch; Android Back opens a menu with **Restart game** when an update is ready. Updates keep the same local save location and never replace files in the middle of a battle. A change to the native Android shell still requires an APK update.
+
+Each push to `main` automatically publishes a content bundle through the dedicated `mobile-channel` branch. The download connection must be able to reach GitHub. For the format, build instructions, and update behavior, see [Mobile delivery](docs/MOBILE.md).
+
+### Browser
+
 This is an early playable slice. Start a local server from this folder and open `http://localhost:4173`:
 
 ```sh

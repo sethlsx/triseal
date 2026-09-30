@@ -8,3 +8,8 @@ build/
 *.log
 *.local
 .cache/
+*.apk
+*.aab
+*.jks
+*.keystore
+android/assets/www/
