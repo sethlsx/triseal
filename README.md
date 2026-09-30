@@ -18,7 +18,9 @@ python3 -m http.server 4173
 
 No account, download, external asset host, or build step is required.
 
-Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Read the enemy intents, then choose which pair of currents best fits the turn. Click a card, then choose a foe when asked. Press **1–5** to play a card, **← / →** to choose a foe, **Enter** to confirm a target, **E** to end a turn, **R** to reweave, and **Esc** to pause. The run autosaves locally, and the opening hand always contains all three sigils so both Resonance and Wake can be learned immediately.
+On a phone, turn the device **sideways**. Combat fills the screen: characters stand in the scene, enemy intentions float overhead, and the hand fans out along the bottom. Tap a card once to read it, then tap it again or choose a foe to cast. Tap the three sigils for combination details, or either card pile to inspect its contents.
+
+Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Read the enemy intents, then choose which pair of currents best fits the turn. Tap a card, then choose a foe when asked. Press **1–5** to play a card, **← / →** to choose a foe, **Enter** to confirm a target, **E** to end a turn, **R** to reweave, and **Esc** to pause. The run autosaves locally, and the opening hand always contains all three sigils so both Resonance and Wake can be learned immediately.
 
 ## Design goals
 

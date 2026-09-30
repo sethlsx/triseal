@@ -264,21 +264,27 @@ export async function animateDiscard(elements, { reduced = false } = {}) {
   try {
     await Promise.all(hand.map((element, index) => {
       const rect = element.getBoundingClientRect();
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+      const transform = getComputedStyle(element).transform;
+      const matrix = transform === "none" ? null : new DOMMatrixReadOnly(transform);
+      const angle = matrix ? `${Math.atan2(matrix.b, matrix.a) * 180 / Math.PI}deg` : "0deg";
+      const scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
       const ghost = element.cloneNode(true);
       ghost.removeAttribute("id");
       ghost.querySelectorAll("[id]").forEach((node) => node.removeAttribute("id"));
       ghost.setAttribute("tabindex", "-1");
       ghost.inert = true;
       Object.assign(ghost.style, {
-        position: "absolute", left: `${rect.left}px`, top: `${rect.top}px`,
-        width: `${rect.width}px`, height: `${rect.height}px`, minWidth: "0", maxWidth: "none",
+        position: "absolute", left: `${rect.left + (rect.width - width) / 2}px`, top: `${rect.top + (rect.height - height) / 2}px`,
+        width: `${width}px`, height: `${height}px`, minWidth: "0", maxWidth: "none",
         margin: "0", transform: "none", animation: "none", transition: "none",
         boxSizing: "border-box", pointerEvents: "none",
       });
       overlay.append(ghost);
       element.style.visibility = "hidden";
       return motion(ghost, [
-        { opacity: 1, transform: "translate(0,0) scale(1)" },
+        { opacity: 1, transform: `translate(0,0) rotate(${angle}) scale(${scale})` },
         { opacity: .75, transform: "translate(12px,-8px) rotate(5deg) scale(.95)", offset: .3 },
         { opacity: 0, transform: "translate(70px,90px) rotate(19deg) scale(.65)" },
       ], { delay: Math.min(index, 7) * 18, duration: 220 }).finally(() => ghost.remove());

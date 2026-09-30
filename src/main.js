@@ -1,6 +1,7 @@
 import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js";
 import { activateAudio, playSound, setSoundEnabled, setMusicEnabled, setVolume, suspendAudio, resumeAudio } from "./audio.js";
 import { renderCombatant } from "./combat-art.js";
+import { renderBattleScenery } from "./battle-scenery.js";
 import { animateAttack, animateImpact, animateWake, animateDiscard, animateDeal } from "./combat-motion.js";
 
 const SAVE_KEY = "spindlewake.save.v1";
@@ -9,6 +10,7 @@ const STARTING_DECK = ["needle", "needle", "needle", "needle", "brace", "brace",
 const RESONANCE_BY_PAIR = { "ember+glass": "prism", "glass+tide": "mirror", "ember+tide": "steam" };
 const DAMAGE_CARD_TYPES = new Set(["damage", "damageBlock", "allDamage", "damageDraw", "allDamageBlock"]);
 const app = document.querySelector("#app");
+const portraitLayout = window.matchMedia("(max-width: 700px) and (orientation: portrait)");
 
 function loadState() {
   try {
@@ -27,7 +29,7 @@ function loadState() {
 }
 
 const state = loadState();
-const ui = { modal: null, pendingCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, cardFx: null, phase: null, enemyTurn: false, activeEnemy: null, resolvedEnemies: [] };
+const ui = { modal: null, pendingCard: null, previewCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, cardFx: null, phase: null, enemyTurn: false, activeEnemy: null, resolvedEnemies: [] };
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music);
 setVolume(state.volume);
@@ -127,6 +129,7 @@ function makeEncounter(run, encounterId) {
   beginTurn(run, true);
   state.screen = "battle";
   ui.pendingCard = null;
+  ui.previewCard = null;
   ui.selectedEnemy = 0;
 }
 
@@ -377,6 +380,7 @@ async function resolveBattleAction(action) {
   const before = JSON.stringify(state.run);
   const beforeScreen = state.screen;
   const focus = document.activeElement?.dataset?.focus;
+  ui.previewCard = null;
   ui.animating = true;
   try {
     await action();
@@ -425,6 +429,12 @@ function animatePlayedCard(index) {
   const dx = to.left + to.width / 2 - from.left - from.width / 2;
   const dy = to.top + to.height / 2 - from.top - from.height / 2;
   const tilt = index % 2 === 0 ? 8 : -8;
+  const width = source.offsetWidth;
+  const height = source.offsetHeight;
+  const transform = getComputedStyle(source).transform;
+  const matrix = transform === "none" ? null : new DOMMatrixReadOnly(transform);
+  const angle = matrix ? `${Math.atan2(matrix.b, matrix.a) * 180 / Math.PI}deg` : "0deg";
+  const scale = matrix ? Math.hypot(matrix.a, matrix.b) : 1;
   const ghost = source.cloneNode(true);
   ghost.classList.remove("selected");
   ghost.classList.add("flight-card");
@@ -434,15 +444,15 @@ function animatePlayedCard(index) {
   ghost.setAttribute("aria-hidden", "true");
   ghost.tabIndex = -1;
   Object.assign(ghost.style, {
-    position: "fixed", left: `${from.left}px`, top: `${from.top}px`,
-    width: `${from.width}px`, height: `${from.height}px`, margin: "0",
+    position: "fixed", left: `${from.left + (from.width - width) / 2}px`, top: `${from.top + (from.height - height) / 2}px`,
+    width: `${width}px`, height: `${height}px`, margin: "0",
     zIndex: "1000", pointerEvents: "none", transformOrigin: "center center",
   });
   document.body.append(ghost);
   source.classList.add("card-launching");
 
   const flight = ghost.animate([
-    { offset: 0, opacity: 1, transform: "translate3d(0, 0, 0) rotate(0deg) scale(1)" },
+    { offset: 0, opacity: 1, transform: `translate3d(0, 0, 0) rotate(${angle}) scale(${scale})` },
     { offset: 0.48, opacity: 1, transform: `translate3d(${dx * 0.48}px, ${dy * 0.48 - 62}px, 0) rotateY(12deg) rotate(${tilt}deg) scale(1.12)`, easing: "cubic-bezier(.2,.7,.25,1)" },
     { offset: 0.76, opacity: 1, transform: `translate3d(${dx * 0.82}px, ${dy * 0.82}px, 0) rotateY(-7deg) rotate(${-tilt * 0.5}deg) scale(1.04)` },
     { offset: 1, opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(.28)` },
@@ -689,7 +699,7 @@ function renderCard(cardId, options = {}) {
   const sigilKey = SIGIL_NAME[card.sigil][state.locale];
   const index = options.index;
   const disabled = options.playable && card.cost > state.run.fight.energy;
-  const selected = options.selected ? "selected" : "";
+  const selected = options.selected ? `selected ${ui.previewCard === index ? "inspected" : ""}` : "";
   const buttonAction = options.reward ? "choose-reward" : "play-card";
   const dataIndex = options.reward ? "" : `data-card-index="${index}"`;
   const dataId = options.reward ? `data-card-id="${cardId}"` : "";
@@ -697,7 +707,9 @@ function renderCard(cardId, options = {}) {
   const prismBonus = !options.reward && state.run?.fight?.prismReady && DAMAGE_CARD_TYPES.has(card.type);
   const previewText = prismBonus ? tr("prismCardPreview", { n: 3 }) : "";
   const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}${previewText ? ` ${previewText}` : ""}`;
-  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
+  const handOffset = options.reward ? 0 : index - (state.run.fight.hand.length - 1) / 2;
+  const fanStyle = options.reward ? "" : `style="--hand-index:${handOffset};--hand-lift:${Math.abs(handOffset) * 3}px;--hand-angle:${handOffset * 3}deg;--card-order:${index}"`;
+  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" ${fanStyle} type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
     <span class="card-topline"><span class="card-cost ${card.cost === 0 ? "free" : ""}">${card.cost}</span><span class="sigil-chip" title="${tr(sigilKey)}">${SIGIL_GLYPH[card.sigil]}</span></span>
     <span class="card-illustration" aria-hidden="true"><span>${card.glyph}</span><i></i>${prismBonus ? `<b class="prism-card-bonus">+3</b>` : ""}</span>
     <span class="card-title">${escapeHtml(lang.name)}</span>
@@ -747,18 +759,6 @@ function renderHome() {
     <div class="home-rune" aria-hidden="true"><span>◒</span><span>✳</span><span>◇</span><i></i></div>
     <footer class="home-footer"><span>${tr("footer")}</span><button type="button" data-action="help" data-focus="help-footer">${tr("howTo")}</button></footer>
   </main>`;
-}
-
-function renderMetrics() {
-  const run = state.run;
-  const fight = run.fight;
-  const incoming = getIncomingDamage();
-  return `<section class="metrics-row" aria-label="${tr("turnTitle")}">
-    <div class="metric metric-hull"><span class="metric-icon">♥</span><div><small>${tr("health")}</small><strong>${run.hp}<i> / ${run.maxHp}</i></strong><span class="meter"><i style="width:${Math.max(0, run.hp / run.maxHp * 100)}%"></i></span></div></div>
-    <div class="metric metric-guard ${ui.cardFx?.guard ? "guard-burst" : ""}"><span class="metric-icon">◒</span><div><small>${tr("guard")}</small><strong>${fight.guard}</strong></div></div>
-    <div class="metric"><span class="metric-icon">✦</span><div><small>${tr("energy")}</small><strong>${fight.energy}<i> / 3</i></strong><span class="energy-pips">${[0,1,2].map((n) => `<i class="${n < fight.energy ? "filled" : ""}"></i>`).join("")}</span></div></div>
-    <div class="incoming ${incoming >= 12 ? "danger" : ""}"><small>${incoming > 0 ? tr("incoming") : tr("turnTitle")}</small><strong>${incoming > 0 ? tr("damage", { n: incoming }) : "—"}</strong>${incoming >= 12 ? `<em>${tr("danger")}</em>` : ""}</div>
-  </section>`;
 }
 
 function renderWake() {
@@ -834,40 +834,49 @@ function renderLog() {
   return `<section class="log-panel"><div class="log-heading"><span class="section-eyebrow">${tr("battleLog")}</span><span class="live-dot"></span></div><ol>${entries.map((entry) => `<li>${tr(entry.key, entry.args)}</li>`).join("")}</ol></section>`;
 }
 
+function renderSigilCompass() {
+  const fight = state.run.fight;
+  const resonanceKey = fight.resonance ? `resonance${fight.resonance[0].toUpperCase()}${fight.resonance.slice(1)}Title` : "shapeResonance";
+  const caption = fight.wakeUsed ? tr("wakeReady") : tr(resonanceKey);
+  return `<button type="button" class="sigil-compass ${fight.wakeUsed ? "compass-complete" : ""} ${ui.cardFx?.resonance ? "resonance-burst" : ""}" data-action="sigils" data-focus="sigils" aria-label="${tr("sigilDetails")}: ${tr("wakeCounter", { n: fight.sigils.length })}" title="${tr("sigilDetails")}">
+    <span class="sigil-orbit" aria-hidden="true">${SIGILS.map((sigil) => `<span class="sigil-node tone-${sigil} ${fight.sigils.includes(sigil) ? "filled" : ""}">${SIGIL_GLYPH[sigil]}</span>`).join("")}</span>
+    <span class="compass-caption">${caption}<i aria-hidden="true"> ⓘ</i></span>
+  </button>`;
+}
+
 function renderBattle() {
   const run = state.run;
   const fight = run.fight;
-  const stepTitle = getEncounterTitle();
   const targeting = ui.pendingCard !== null;
+  const incoming = getIncomingDamage();
   const handCards = fight.hand.map((id, index) => renderCard(id, {
-    index, playable: true, selected: targeting && ui.pendingCard === index,
+    index, playable: true, selected: ui.previewCard === index || (targeting && ui.pendingCard === index),
   })).join("");
-  const living = fight.enemies.filter((enemy) => enemy.hp > 0).length;
-  const notice = ui.notice || (ui.animating ? tr("resolving") : targeting ? tr("targetHint") : tr("clickCardHint"));
-  return `<main class="game-scene battle-scene ${ui.animating ? "combat-resolving" : ""}">
-    <section class="battle-heading"><div><span class="section-eyebrow">${tr("chapter")} · ${tr("step", { n: run.stage })}</span><h1>${stepTitle}</h1></div><div class="turn-pill"><span class="live-dot"></span>${tr("turn", { turn: fight.turn })}</div></section>
-    ${renderMetrics()}
-    <div class="battle-grid">
-      <section class="battle-main">
-        <div class="arena-heading"><div><span class="section-eyebrow">${tr("enemyKind")}</span><span class="foe-count">${living} <small>${tr("currentFoe")}</small></span></div><span class="scene-coordinate">${String(run.stage).padStart(2, "0")} / 03</span></div>
-        <div class="arena combat-stage ${run.encounterId === "boss" ? "arena-boss" : ""}"><div class="arena-glow" aria-hidden="true"></div><div class="arena-orbit" aria-hidden="true"><i></i><b></b></div>
-          ${ui.phase ? `<div class="combat-banner tone-${ui.phase.tone}" role="status"><strong>${ui.phase.title}</strong><small>${ui.phase.detail}</small></div>` : `<div class="combat-scene-label" aria-hidden="true">${tr("sceneLabel")}</div>`}
-          ${renderHero()}<div class="foe-row">${fight.enemies.map(renderEnemy).join("")}</div><div class="arena-floor" aria-hidden="true"></div></div>
-        ${renderWake()}
-      </section>
-      <aside class="battle-side">
-        <div class="side-title"><span class="section-eyebrow">${tr(ui.enemyTurn ? "enemyTurn" : "turnTitle")}</span><h2>${tr(ui.enemyTurn ? "enemiesActing" : "turnHint")}</h2></div>
-        <div class="side-actions"><button type="button" class="button button-primary end-turn" data-action="end-turn" data-focus="end-turn">${tr(ui.animating ? "resolving" : "endTurn")} <span aria-hidden="true">${ui.animating ? "···" : "↵"}</span></button>
-          <button type="button" class="button button-quiet reweave-button" data-action="reweave" data-focus="reweave" ${run.reweaveAvailable && fight.hand.length > 0 ? "" : "disabled"}><span aria-hidden="true">⤨</span>${run.reweaveAvailable ? tr("reweave") : tr("reweaveUsed")}</button>
-          <button type="button" class="deck-button" data-action="deck" data-focus="deck">▤ ${tr("deckPeek")} <span>${run.deck.length}</span></button>
-        </div>
-        ${renderLog()}
-      </aside>
-    </div>
-    <section class="hand-zone"><div class="hand-header"><div><span class="section-eyebrow">${tr(ui.enemyTurn ? "enemyTurn" : "turnTitle")}</span><h2>${tr(ui.animating ? "resolving" : "clickCardHint")}</h2></div><div class="hand-piles"><span>${tr("drawPile")} <b>${fight.drawPile.length}</b></span><span>${tr("discardPile")} <b>${fight.discardPile.length}</b></span></div></div>
-      <div class="hand-cards">${handCards || `<div class="empty-hand">${tr(ui.enemyTurn ? "enemiesActing" : "clickCardHint")}</div>`}</div>
-      <div class="hand-footer"><span class="keyboard-hint">${notice}</span><span class="hand-limit">${fight.hand.length} / ${MAX_HAND}</span></div>
+  const notice = ui.notice || (ui.animating ? tr("resolving") : targeting ? tr("targetHint") : tr(window.matchMedia("(pointer: coarse)").matches ? "touchCardHint" : "clickCardHint"));
+  const latest = run.log.at(-1);
+  const inspected = ui.previewCard !== null ? CARDS[fight.hand[ui.previewCard]] : null;
+  return `<main class="game-scene battle-scene landscape-battle ${ui.animating ? "combat-resolving" : ""}">
+    ${renderBattleScenery(run.encounterId)}
+    <div class="battle-location"><small>${tr("step", { n: run.stage })}</small><h1>${getEncounterTitle()}</h1></div>
+    <div class="battle-turn"><strong>${tr("turn", { turn: fight.turn })}</strong><span class="${incoming >= 12 ? "danger" : ""}">${incoming ? `${tr("incoming")} · ${incoming}` : tr(ui.enemyTurn ? "enemyTurn" : "turnTitle")}</span></div>
+    ${renderSigilCompass()}
+    <section class="arena combat-stage ${run.encounterId === "boss" ? "arena-boss" : ""}" aria-label="${tr("battlefield")}">
+      ${ui.phase ? `<div class="combat-banner tone-${ui.phase.tone}" role="status"><strong>${ui.phase.title}</strong><small>${ui.phase.detail}</small></div>` : ""}
+      ${renderHero()}<div class="foe-row">${fight.enemies.map(renderEnemy).join("")}</div>
     </section>
+    <div class="energy-orb" aria-label="${tr("energy")}: ${fight.energy} / 3"><strong>${fight.energy}<small>/3</small></strong><span>${tr("energy")}</span></div>
+    <button class="pile-button draw-pile" type="button" data-action="draw-pile" data-focus="draw-pile" aria-label="${tr("drawPile")}: ${fight.drawPile.length}"><span class="pile-symbol" aria-hidden="true">▱</span><b>${fight.drawPile.length}</b><small>${tr("drawPile")}</small></button>
+    <section class="hand-zone ${fight.hand.length > 7 ? "hand-overflow" : ""} ${fight.hand.length > 5 ? "hand-many" : ""}" aria-label="${tr("hand")}" style="--hand-count:${fight.hand.length}">
+      <div class="hand-cards">${handCards || `<div class="empty-hand">${tr(ui.enemyTurn ? "enemiesActing" : "noCards")}</div>`}</div>
+      <div class="hand-footer"><span>${notice}</span></div>
+    </section>
+    ${inspected ? `<aside class="card-readout tone-${inspected.sigil}" aria-live="polite"><strong>${escapeHtml(inspected[state.locale].name)}</strong><span>${escapeHtml(inspected[state.locale].text)}</span><small>${tr(inspected.target ? "touchTargetHint" : "touchConfirmHint")}</small></aside>` : ""}
+    <button class="pile-button discard-pile" type="button" data-action="discard-pile" data-focus="discard-pile" aria-label="${tr("discardPile")}: ${fight.discardPile.length}"><span class="pile-symbol" aria-hidden="true">▱</span><b>${fight.discardPile.length}</b><small>${tr("discardPile")}</small></button>
+    <div class="battle-actions"><button type="button" class="end-turn" data-action="end-turn" data-focus="end-turn"><span>${tr(ui.animating ? "resolving" : "endTurn")}</span><i aria-hidden="true">${ui.animating ? "···" : "↠"}</i></button>
+      <button type="button" class="reweave-button" data-action="reweave" data-focus="reweave" aria-label="${tr("reweaveAvailable")}" ${run.reweaveAvailable && fight.hand.length > 0 ? "" : "disabled"}><span aria-hidden="true">⤨</span>${run.reweaveAvailable ? tr("reweave") : tr("reweaveUsed")}</button>
+    </div>
+    <button class="battle-journal" type="button" data-action="battle-log" data-focus="battle-log" aria-label="${tr("battleLog")}"><span aria-hidden="true">≋</span>${latest ? tr(latest.key, latest.args) : tr("battleLog")}</button>
+    <aside class="orientation-hint" role="note"><span class="rotate-device" aria-hidden="true">↻</span><h2>${tr("rotateTitle")}</h2><p>${tr("rotateDescription")}</p><button type="button" data-action="home" class="button button-quiet">${tr("home")}</button></aside>
   </main>`;
 }
 
@@ -904,6 +913,12 @@ function renderSummary() {
 function renderModal() {
   if (!ui.modal) return "";
   const modal = ui.modal;
+  if (modal === "sigils" || modal === "battle-log") {
+    const title = tr(modal === "sigils" ? "sigilDetails" : "battleLog");
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card battle-detail-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><h2 id="modal-title">${title}</h2>
+      ${modal === "sigils" ? `${renderWake()}<p class="sigil-explanation">${tr("helpWakeBody")}</p>` : renderLog()}
+    </section></div>`;
+  }
   if (modal === "help") {
     const sections = [
       ["01", "Wake"], ["02", "Turn"], ["03", "Reweave"], ["04", "Route"], ["05", "Keys"],
@@ -922,24 +937,40 @@ function renderModal() {
       ${state.run && !state.run.result ? `<button type="button" class="button button-secondary modal-leave" data-action="leave-title" data-focus="leave-title">${tr("saveAndLeave")} <span>→</span></button>` : ""}
     </section></div>`;
   }
-  if (modal === "deck") {
-    const counts = state.run.deck.reduce((result, id) => { result[id] = (result[id] || 0) + 1; return result; }, {});
+  if (["deck", "draw-pile", "discard-pile"].includes(modal)) {
+    const pile = modal === "draw-pile" ? state.run.fight.drawPile : modal === "discard-pile" ? state.run.fight.discardPile : state.run.deck;
+    const title = tr(modal === "draw-pile" ? "drawPile" : modal === "discard-pile" ? "discardPile" : "deckTitle");
+    const counts = pile.reduce((result, id) => { result[id] = (result[id] || 0) + 1; return result; }, {});
     const cards = Object.entries(counts).map(([id, amount]) => `<article class="deck-entry tone-${CARDS[id].tone}"><span class="sigil-chip">${SIGIL_GLYPH[CARDS[id].sigil]}</span><div><strong>${escapeHtml(cardName(id))}</strong><small>${escapeHtml(CARDS[id][state.locale].text)}</small></div><b>×${amount}</b></article>`).join("");
-    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card deck-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">${tr("chapter")}</span><h2 id="modal-title">${tr("deckTitle")}</h2><p>${tr("deckSummary", { draw: state.run.fight.drawPile.length, discard: state.run.fight.discardPile.length, hand: state.run.fight.hand.length })}</p><div class="deck-list">${cards || `<p>${tr("noCards")}</p>`}</div></section></div>`;
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card deck-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">${tr("chapter")}</span><h2 id="modal-title">${title}</h2><p>${tr("deckSummary", { draw: state.run.fight.drawPile.length, discard: state.run.fight.discardPile.length, hand: state.run.fight.hand.length })}</p><div class="deck-list">${cards || `<p>${tr("noCards")}</p>`}</div>${modal !== "deck" ? `<button type="button" class="button button-quiet modal-resume" data-action="deck" data-focus="all-deck">${tr("deckPeek")} →</button>` : ""}</section></div>`;
   }
   return "";
 }
 
+function updateOrientationAccess() {
+  const blocked = state.screen === "battle" && portraitLayout.matches;
+  app.querySelectorAll(".landscape-battle > :not(.orientation-hint):not(.world-scenery)").forEach((element) => {
+    element.inert = blocked;
+  });
+}
+
+portraitLayout.addEventListener("change", updateOrientationAccess);
+
 function render() {
   const activeFocus = document.activeElement?.dataset?.focus;
+  const handScroll = app.querySelector(".hand-cards")?.scrollLeft || 0;
   document.documentElement.lang = state.locale === "zh" ? "zh-Hans" : "en";
   document.body.classList.toggle("reduce-motion", state.motion);
+  document.body.classList.toggle("battle-mode", state.screen === "battle" && Boolean(state.run));
   const screen = state.screen === "battle" && state.run ? renderBattle()
     : state.screen === "reward" && state.run ? renderReward()
       : state.screen === "route" && state.run ? renderRoute()
         : state.screen === "summary" && state.run ? renderSummary()
           : renderHome();
   app.innerHTML = `${renderHeader()}${screen}${renderModal()}<div class="toast" role="status" aria-live="polite">${ui.notice}</div>`;
+  const hand = app.querySelector(".hand-cards");
+  if (hand) hand.scrollLeft = handScroll;
+  updateOrientationAccess();
   if (ui.animating) app.querySelectorAll("button").forEach((button) => { button.disabled = true; });
   const focusTarget = ui.focusAfterRender || activeFocus;
   const focusElement = focusTarget ? app.querySelector(`[data-focus="${CSS.escape(focusTarget)}"]`) : null;
@@ -1024,8 +1055,26 @@ function handleAction(actionButton, clickEvent) {
     case "deck":
       showModal("deck");
       break;
+    case "draw-pile":
+    case "discard-pile":
+    case "sigils":
+    case "battle-log":
+      showModal(action);
+      break;
     case "play-card":
-      playCard(Number(actionButton.dataset.cardIndex));
+      { const index = Number(actionButton.dataset.cardIndex);
+        const card = CARDS[state.run?.fight.hand[index]];
+        const touch = clickEvent.pointerType === "touch" || (clickEvent.detail > 0 && window.matchMedia("(pointer: coarse)").matches);
+        if (touch && card && card.cost <= state.run.fight.energy) {
+          if (ui.previewCard !== index) {
+            ui.previewCard = index;
+            ui.pendingCard = card.target ? index : null;
+            ui.notice = tr(card.target ? "touchTargetHint" : "touchConfirmHint");
+            playSound("select");
+            render();
+          } else playCard(index, card.target ? ui.selectedEnemy : null);
+        } else playCard(index);
+      }
       break;
     case "select-foe": {
       const index = Number(actionButton.dataset.enemyIndex);
@@ -1056,6 +1105,12 @@ app.addEventListener("click", (clickEvent) => {
   if (ui.animating) { clickEvent.preventDefault(); return; }
   const button = clickEvent.target.closest("[data-action]");
   if (button) handleAction(button, clickEvent);
+  else if (ui.previewCard !== null && !ui.modal) {
+    ui.previewCard = null;
+    ui.pendingCard = null;
+    ui.notice = "";
+    render();
+  }
 });
 
 app.addEventListener("submit", (submitEvent) => {
@@ -1085,6 +1140,7 @@ window.addEventListener("keydown", (keyboardEvent) => {
     return;
   }
   if (ui.modal || state.screen !== "battle" || !state.run) return;
+  if (portraitLayout.matches) return;
   const target = keyboardEvent.target;
   if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable) return;
   const key = keyboardEvent.key.toLowerCase();

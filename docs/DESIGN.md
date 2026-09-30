@@ -41,6 +41,10 @@ Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a car
 
 ## Feedback translated into choices
 
+### Landscape play space
+
+Phone landscape is the primary composition. The drowned observatory fills the viewport, with the chartkeeper and enemies placed directly into its depth. Health and guard stay beside their owners; enemy intentions remain overhead. A compact three-sigil constellation opens the full Resonance explanation on demand. Energy, draw/discard piles, the fanned hand, and the end-turn seal sit around the lower edge. Battle history opens separately instead of occupying a permanent panel. Portrait phones show a rotation prompt, and short landscape screens use compact route, reward, and title layouts.
+
 - **Players value simple rules with depth.** Keep the two-step braid visible: the first pair picks one understandable tactical reaction, and the third sigil triggers the Wake. Explain both payoffs in the tutorial and on the board.
 - **Runs can feel samey when high difficulty narrows viable builds.** Give each sigil several action types and make card rewards useful across multiple combinations.
 - **Unavoidable damage and early randomness feel unfair.** Telegraph enemy actions, let players see likely incoming damage, and provide one limited hand correction.
