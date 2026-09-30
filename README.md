@@ -18,14 +18,30 @@ python3 -m http.server 4173
 
 No account, download, external asset host, or build step is required.
 
-Play through the Chalk Shoal, choose a passage, and face the Missing Horizon. Read the enemy intents, then choose which pair of currents best fits the turn. Click a card, then choose a foe when asked. Press **1–5** to play a card, **← / →** to choose a foe, **Enter** to confirm a target, **E** to end a turn, **R** to reweave, and **Esc** to pause. The run autosaves locally, and the opening hand always contains all three sigils so both Resonance and Wake can be learned immediately.
+Begin on the route map, enter the Chalk Shoal, choose a sheltered or dangerous passage, and face the Missing Horizon. The illustrated Chartkeeper stands on the left of the battlefield; enemies stand on the right with their next actions above them and health bars below. Cards and energy sit along the bottom. Click a card, then click an enemy when a target is required.
+
+Press **1–5** to play a card, **← / →** to choose a foe, **Enter** to confirm a target, **E** to end a turn, **R** to reweave, **M** to inspect the route, and **Esc** to cancel targeting or pause. After each battle, choose a card reward and then the next available map node. The run autosaves locally, and the opening hand always contains all three sigils. Existing prototype saves remain supported.
+
+The combat scene includes original character illustrations, idle movement, casting projectiles, enemy attacks, damage and guard feedback, and a three-sigil Wake burst. The reduced-motion setting (or operating-system preference) removes travel and continuous animation. All art and audio are served locally.
+
+## Local development
+
+On Windows, run `py -m http.server 4173 --bind 127.0.0.1` from this folder and open `http://127.0.0.1:4173/`. No package installation is needed. Use the same browser address to retain a local save.
+
+Run the dependency-free gameplay regression checks with:
+
+```sh
+node scripts/gameplay-checks.mjs
+```
+
+After UI changes, verify English and Simplified Chinese, both route branches, card targeting, the complete boss victory flow, reload/resume, reduced motion, and narrow screens in a browser. Asset-generation prompts and provenance are recorded under `assets/`.
 
 ## Design goals
 
 - Explain the central rule in the first minute, then leave room to master it.
 - Let the first two sigils create a tactical choice shaped by visible enemy intent; the third pays off with the Wake.
 - Make card order and enemy intent visible before the player commits.
-- Give each played card a curved flight into the arena, with a visible hit and a larger three-sigil Wake burst.
+- Show the player and enemies in one illustrated arena, with readable intents, card-cast motion, visible hits, and a larger three-sigil Wake burst.
 - Keep early choices viable across several builds; random rewards should create variety without deciding the run by themselves.
 - Let a run fit a short session and resume after a tab is closed.
 - Treat animation, sound, reduced motion, keyboard control, and localization as part of the core experience.

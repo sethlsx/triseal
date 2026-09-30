@@ -16,7 +16,7 @@ The charts of the Drowned Observatory were woven from strands that remember the 
 
 1. The player sees each foe's next intent before choosing a card.
 2. Draw five cards and receive three energy.
-3. Play cards in any order, aim their effects, and watch the current's three-sigil braid fill. Each card arcs from the hand into its target before its effect resolves.
+3. Play cards in any order, aim their effects, and watch the current's three-sigil braid fill. The illustrated Chartkeeper casts from the left side of a shared battlefield toward foes on the right. Cards lift from the hand; projectiles, hit reactions, and shield flashes show the result.
 4. The first two distinct sigils played in a turn choose one of three Resonances: Tide + Ember weakens foe attacks, Ember + Glass charges the next attack card, and Glass + Tide grants guard. This makes card order a tactical choice: choose control, offense, or defense against the visible intents.
 5. Playing the third distinct sigil triggers a Wake: a modest area strike, a guard pulse, and one extra draw. The impact, guard, and drawn card each get a clear motion cue; the Wake gets a larger burst. The UI previews each card and explains the trigger before it resolves.
 6. End the turn; surviving foes resolve their visible intents and reveal their next move.
@@ -34,7 +34,15 @@ Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a car
 - A one-use **Reweave** per expedition: replace the hand once before ending a turn. This is an agency tool, not a guarantee of a win.
 - Local autosave at safe route points and a manual pause menu.
 - English and Simplified Chinese, keyboard and pointer input, adjustable sound, and reduced motion.
-- Card-flight and impact animation authored in CSS and the Web Animations API; the reduced-motion setting and OS preference skip the flight and shorten interface effects.
+- A node route map before the first encounter and after each reward: Chalk Shoal branches into a sheltered or risky passage, then reconnects at the final foe. The same map can be inspected during battle without changing the current encounter.
+- Original raster character art and a shared illustrated environment, with locally served assets and prompts recorded in the asset provenance.
+- Cast, idle, enemy-turn, and impact animation authored in CSS and the Web Animations API; the reduced-motion setting and OS preference skip travel and continuous movement.
+
+## Visual interaction model
+
+Use the familiar deckbuilder information hierarchy: the player on the left, enemy targets on the right, next enemy actions above their heads, health and guard beside the actors, and a bottom hand beside the energy counter and end-turn action. The scene uses original underwater-observatory art and interface treatment. The official Slay the Spire press kit was consulted for broad genre conventions, without importing its images or character designs: https://www.megacrit.com/press-kits/slay-the-spire/.
+
+Enemy turns resolve one actor at a time. Input stays locked through each complete action; the saved state advances only after the enemy sequence finishes. The boss is explicitly encounter 3, and defeating it ends the run. Existing saves that reached the boss with an old stage number are normalized on load.
 
 ## Feedback translated into choices
 

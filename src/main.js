@@ -1,5 +1,7 @@
 import { TEXT, SIGILS, SIGIL_NAME, SIGIL_GLYPH, CARDS, ENEMIES, ENCOUNTERS, REWARD_POOLS } from "./data.js";
 import { activateAudio, playSound, setSoundEnabled, setMusicEnabled, setVolume, suspendAudio, resumeAudio } from "./audio.js";
+import { renderBattleScene, renderRouteScene, spriteMarkup } from "./scenes.js";
+import { animateCardCast, animateEnemyAction, settleImpact } from "./animation.js";
 
 const SAVE_KEY = "spindlewake.save.v1";
 const MAX_HAND = 10;
@@ -25,7 +27,16 @@ function loadState() {
 }
 
 const state = loadState();
-const ui = { modal: null, pendingCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, cardFx: null };
+// Saves from the first prototype could reach the boss with stage still set to 2.
+if (state.run?.encounterId === "boss") {
+  state.run.stage = 3;
+  if (!state.run.result && state.run.fight?.enemies?.length && state.run.fight.enemies.every((enemy) => enemy.hp <= 0)) {
+    state.run.result = "won";
+    state.run.returnScreen = "summary";
+    state.screen = "summary";
+  }
+}
+const ui = { modal: null, pendingCard: null, selectedEnemy: 0, notice: "", returnFocus: null, focusAfterRender: null, animating: false, enemyTurn: false, actingEnemy: null, cardFx: null };
 setSoundEnabled(state.sound);
 setMusicEnabled(state.music);
 setVolume(state.volume);
@@ -245,6 +256,8 @@ function startRun(seedValue) {
   ui.modal = null;
   ui.notice = "";
   makeEncounter(state.run, "shoal");
+  state.screen = "route";
+  state.run.returnScreen = "route";
   saveState();
   playSound("play");
   render();
@@ -255,6 +268,7 @@ function makeSeedFromForm() {
 }
 
 function newRunFromHome() {
+  if (ui.animating) return;
   if (state.run && !state.run.result && !window.confirm(tr("overwriteConfirm"))) return;
   activateAudio();
   startRun(makeSeedFromForm());
@@ -328,60 +342,19 @@ function checkVictory() {
   const run = state.run;
   if (!run.fight.enemies.every((enemy) => enemy.hp <= 0)) return false;
   run.fightsWon += 1;
-  if (run.stage >= 3) finishRun(true);
+  if (run.encounterId === "boss") finishRun(true);
   else beginReward();
   return true;
 }
 
 function animatePlayedCard(index, targetIndex, card) {
-  const prefersReducedMotion = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-  if (state.motion || prefersReducedMotion) return Promise.resolve();
-
-  const source = app.querySelector(`.hand-card[data-card-index="${index}"]`);
-  const arena = app.querySelector(".arena");
-  const target = card.target
-    ? app.querySelector(`.foe-card[data-enemy-index="${targetIndex}"]`) || arena
-    : arena;
-  if (!source || !target || typeof source.animate !== "function") return Promise.resolve();
-
-  const from = source.getBoundingClientRect();
-  const to = target.getBoundingClientRect();
-  if (!from.width || !from.height || !to.width || !to.height) return Promise.resolve();
-  const dx = to.left + to.width / 2 - from.left - from.width / 2;
-  const dy = to.top + to.height / 2 - from.top - from.height / 2;
-  const tilt = index % 2 === 0 ? 8 : -8;
-  const ghost = source.cloneNode(true);
-  ghost.classList.remove("selected");
-  ghost.classList.add("flight-card");
-  ghost.removeAttribute("data-action");
-  ghost.removeAttribute("data-card-index");
-  ghost.removeAttribute("data-focus");
-  ghost.setAttribute("aria-hidden", "true");
-  ghost.tabIndex = -1;
-  Object.assign(ghost.style, {
-    position: "fixed", left: `${from.left}px`, top: `${from.top}px`,
-    width: `${from.width}px`, height: `${from.height}px`, margin: "0",
-    zIndex: "1000", pointerEvents: "none", transformOrigin: "center center",
-  });
-  document.body.append(ghost);
-  source.classList.add("card-launching");
-
-  const flight = ghost.animate([
-    { offset: 0, opacity: 1, transform: "translate3d(0, 0, 0) rotate(0deg) scale(1)" },
-    { offset: 0.48, opacity: 1, transform: `translate3d(${dx * 0.48}px, ${dy * 0.48 - 62}px, 0) rotateY(12deg) rotate(${tilt}deg) scale(1.12)`, easing: "cubic-bezier(.2,.7,.25,1)" },
-    { offset: 0.76, opacity: 1, transform: `translate3d(${dx * 0.82}px, ${dy * 0.82}px, 0) rotateY(-7deg) rotate(${-tilt * 0.5}deg) scale(1.04)` },
-    { offset: 1, opacity: 0, transform: `translate3d(${dx}px, ${dy}px, 0) rotate(0deg) scale(.28)` },
-  ], { duration: 470, easing: "cubic-bezier(.22,.72,.25,1)", fill: "both" });
-  return flight.finished.catch(() => {}).finally(() => {
-    source.classList.remove("card-launching");
-    ghost.remove();
-  });
+  return animateCardCast({ app, index, targetIndex, card, reduced: state.motion });
 }
 
 async function playCard(index, targetIndex = null) {
   if (ui.animating) return;
   const run = state.run;
-  if (!run || state.screen !== "battle") return;
+  if (!run || state.screen !== "battle" || ui.modal) return;
   const fight = run.fight;
   const cardId = fight.hand[index];
   const card = CARDS[cardId];
@@ -435,55 +408,69 @@ async function playCard(index, targetIndex = null) {
   render();
 }
 
-function enemyTurn() {
+async function enemyTurn() {
+  if (ui.animating || !state.run || state.screen !== "battle") return;
   const run = state.run;
   const fight = run.fight;
+  ui.animating = true;
+  ui.enemyTurn = true;
   fight.discardPile.push(...fight.hand);
   fight.hand = [];
-  for (const enemy of fight.enemies) {
-    if (enemy.hp <= 0) continue;
-    const intent = currentIntent(enemy);
-    enemy.guard = 0;
-    if (intent.type === "attack") {
-      const blocked = Math.min(fight.guard, intent.value);
-      fight.guard -= blocked;
-      const dealt = intent.value - blocked;
-      run.hp = Math.max(0, run.hp - dealt);
-      event("logEnemyAttack", { name: enemyName(enemy), n: dealt });
-      if (dealt > 0) playSound("hit");
-    } else if (intent.type === "brace") {
-      enemy.guard = intent.value;
-      event("logEnemyBrace", { name: enemyName(enemy), n: intent.value });
-      playSound("guard");
-    } else if (intent.type === "charge") {
-      enemy.power += intent.value;
-      event("logEnemyCharge", { name: enemyName(enemy), n: intent.value });
-      playSound("select");
+  try {
+    for (const [index, enemy] of fight.enemies.entries()) {
+      if (enemy.hp <= 0) continue;
+      const intent = currentIntent(enemy);
+      ui.actingEnemy = index;
+      render();
+      await animateEnemyAction({ app, index, intent, reduced: state.motion });
+      enemy.guard = 0;
+      ui.cardFx = { hits: [], drawnIndices: [], heroHit: 0, blocked: 0 };
+      if (intent.type === "attack") {
+        const blocked = Math.min(fight.guard, intent.value);
+        fight.guard -= blocked;
+        const dealt = intent.value - blocked;
+        run.hp = Math.max(0, run.hp - dealt);
+        ui.cardFx.heroHit = dealt;
+        ui.cardFx.blocked = blocked;
+        event("logEnemyAttack", { name: enemyName(enemy), n: dealt });
+        playSound(dealt > 0 ? "hit" : "guard");
+      } else if (intent.type === "brace") {
+        enemy.guard = intent.value;
+        event("logEnemyBrace", { name: enemyName(enemy), n: intent.value });
+        playSound("guard");
+      } else if (intent.type === "charge") {
+        enemy.power += intent.value;
+        event("logEnemyCharge", { name: enemyName(enemy), n: intent.value });
+        playSound("select");
+      }
+      enemy.intentIndex = (enemy.intentIndex + 1) % ENEMIES[enemy.id].pattern.length;
+      render();
+      await settleImpact(state.motion);
+      if (run.hp <= 0) break;
     }
-    enemy.intentIndex = (enemy.intentIndex + 1) % ENEMIES[enemy.id].pattern.length;
-    if (run.hp <= 0) break;
-  }
-  fight.guard = 0;
-  if (run.hp <= 0) {
-    finishRun(false);
+    fight.guard = 0;
+    if (run.hp <= 0) finishRun(false);
+    else beginTurn(run);
+    // Persist only the completed turn, so reloading mid-animation cannot repeat attacks.
+    saveState();
+  } finally {
+    ui.animating = false;
+    ui.enemyTurn = false;
+    ui.actingEnemy = null;
     render();
-    return;
   }
-  beginTurn(run);
-  saveState();
-  render();
 }
 
 function endTurn() {
-  if (!state.run || state.screen !== "battle" || ui.modal) return;
+  if (ui.animating || !state.run || state.screen !== "battle" || ui.modal) return;
   ui.pendingCard = null;
   ui.notice = "";
-  enemyTurn();
+  return enemyTurn();
 }
 
 function reweave() {
   const run = state.run;
-  if (!run || state.screen !== "battle" || ui.modal) return;
+  if (ui.animating || !run || state.screen !== "battle" || ui.modal) return;
   if (!run.reweaveAvailable) {
     ui.notice = tr("reweaveUsed");
     render();
@@ -510,29 +497,34 @@ function reweave() {
 function chooseReward(cardId) {
   const run = state.run;
   if (!run || state.screen !== "reward") return;
+  if (cardId && !(run.rewardOptions || []).includes(cardId)) return;
   if (cardId) {
     run.deck.push(cardId);
     run.cardsAdded += 1;
   }
   run.rewardOptions = [];
-  if (run.stage === 1) state.screen = "route";
-  else {
-    run.hp = Math.min(run.maxHp, run.hp + 4);
-    makeEncounter(run, "boss");
-  }
+  state.screen = "route";
+  run.returnScreen = "route";
   saveState();
   render();
 }
 
 function chooseRoute(routeId) {
   const run = state.run;
-  if (!run || state.screen !== "route") return;
-  const recovery = routeId === "quiet" ? 8 : 2;
-  run.hp = Math.min(run.maxHp, run.hp + recovery);
-  run.route = routeId;
-  run.stage = 2;
-  event("logTide", { n: recovery });
-  makeEncounter(run, routeId);
+  if (!run || state.screen !== "route" || ui.modal || ui.animating) return;
+  const available = run.fightsWon === 0 ? ["shoal"] : run.fightsWon === 1 ? ["quiet", "rift"] : run.fightsWon === 2 ? ["boss"] : [];
+  if (!available.includes(routeId)) return;
+  const recovery = routeId === "quiet" ? 8 : routeId === "rift" ? 2 : routeId === "boss" ? 4 : 0;
+  const healed = Math.min(run.maxHp - run.hp, recovery);
+  run.hp += healed;
+  if (routeId === "quiet" || routeId === "rift") run.route = routeId;
+  run.stage = routeId === "shoal" ? 1 : routeId === "boss" ? 3 : 2;
+  if (healed > 0) event("logTide", { n: healed });
+  // The initial fight is prepared when the run starts, retaining deterministic draws.
+  if (routeId !== "shoal" || run.encounterId !== "shoal") makeEncounter(run, routeId);
+  else state.screen = "battle";
+  run.returnScreen = "battle";
+  ui.focusAfterRender = "hand-0";
   saveState();
   render();
 }
@@ -573,17 +565,17 @@ function renderCard(cardId, options = {}) {
   const lang = card[state.locale] || card.en;
   const sigilKey = SIGIL_NAME[card.sigil][state.locale];
   const index = options.index;
-  const disabled = options.playable && card.cost > state.run.fight.energy;
+  const disabled = options.playable && (ui.animating || card.cost > state.run.fight.energy);
   const selected = options.selected ? "selected" : "";
-  const dealing = !options.reward && ui.cardFx?.drawnIndices.includes(index);
+  const dealing = !options.reward && ui.cardFx?.drawnIndices?.includes(index);
   const buttonAction = options.reward ? "choose-reward" : "play-card";
   const dataIndex = options.reward ? "" : `data-card-index="${index}"`;
-  const dataId = options.reward ? `data-card-id="${cardId}"` : "";
+  const dataId = `data-card-id="${cardId}"`;
   const focusId = options.reward ? `reward-${cardId}` : `hand-${index}`;
   const prismBonus = !options.reward && state.run?.fight?.prismReady && DAMAGE_CARD_TYPES.has(card.type);
   const previewText = prismBonus ? tr("prismCardPreview", { n: 3 }) : "";
   const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}${previewText ? ` ${previewText}` : ""}`;
-  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""} ${dealing ? "deal-in" : ""}" style="${dealing ? `--deal-order:${index}` : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
+  return `<button class="playing-card card-type-${card.type} tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""} ${dealing ? "deal-in" : ""}" style="${dealing ? `--deal-order:${index}` : ""}" type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
     <span class="card-topline"><span class="card-cost ${card.cost === 0 ? "free" : ""}">${card.cost}</span><span class="sigil-chip" title="${tr(sigilKey)}">${SIGIL_GLYPH[card.sigil]}</span></span>
     <span class="card-illustration" aria-hidden="true"><span>${card.glyph}</span><i></i>${prismBonus ? `<b class="prism-card-bonus">+3</b>` : ""}</span>
     <span class="card-title">${escapeHtml(lang.name)}</span>
@@ -630,21 +622,10 @@ function renderHome() {
       </form>
       <p class="start-hint"><span aria-hidden="true">✦</span>${tr("startHint")}</p>
     </section>
+    <div class="home-hero" aria-hidden="true">${spriteMarkup("hero")}</div>
     <div class="home-rune" aria-hidden="true"><span>◒</span><span>✳</span><span>◇</span><i></i></div>
     <footer class="home-footer"><span>${tr("footer")}</span><button type="button" data-action="help" data-focus="help-footer">${tr("howTo")}</button></footer>
   </main>`;
-}
-
-function renderMetrics() {
-  const run = state.run;
-  const fight = run.fight;
-  const incoming = getIncomingDamage();
-  return `<section class="metrics-row" aria-label="${tr("turnTitle")}">
-    <div class="metric metric-hull"><span class="metric-icon">♥</span><div><small>${tr("health")}</small><strong>${run.hp}<i> / ${run.maxHp}</i></strong><span class="meter"><i style="width:${Math.max(0, run.hp / run.maxHp * 100)}%"></i></span></div></div>
-    <div class="metric metric-guard ${ui.cardFx?.guard ? "guard-burst" : ""}"><span class="metric-icon">◒</span><div><small>${tr("guard")}</small><strong>${fight.guard}</strong></div></div>
-    <div class="metric"><span class="metric-icon">✦</span><div><small>${tr("energy")}</small><strong>${fight.energy}<i> / 3</i></strong><span class="energy-pips">${[0,1,2].map((n) => `<i class="${n < fight.energy ? "filled" : ""}"></i>`).join("")}</span></div></div>
-    <div class="incoming ${incoming >= 12 ? "danger" : ""}"><small>${incoming > 0 ? tr("incoming") : tr("turnTitle")}</small><strong>${incoming > 0 ? tr("damage", { n: incoming }) : "—"}</strong>${incoming >= 12 ? `<em>${tr("danger")}</em>` : ""}</div>
-  </section>`;
 }
 
 function renderWake() {
@@ -679,72 +660,18 @@ function renderWake() {
   </section>`;
 }
 
-function intentMarkup(enemy) {
-  const intent = currentIntent(enemy);
-  const key = intent.type === "attack" ? "intentAttack" : intent.type === "brace" ? "intentBrace" : "intentCharge";
-  const icon = intent.type === "attack" ? "↗" : intent.type === "brace" ? "◒" : "↑";
-  return `<span class="intent intent-${intent.type}"><span aria-hidden="true">${icon}</span>${tr(key, { n: intent.value })}</span>`;
-}
-
-function renderEnemy(enemy, index) {
-  const hit = ui.cardFx?.hits.find((entry) => entry.index === index);
-  if (enemy.hp <= 0) return `<div class="foe-card defeated ${hit ? "foe-defeated-hit" : ""}" aria-hidden="true"><span class="defeated-mark">×</span>${hit ? `<span class="impact-number">−${hit.amount}</span>` : ""}</div>`;
-  const pending = ui.pendingCard !== null;
-  const selected = ui.selectedEnemy === index;
-  const intent = currentIntent(enemy);
-  const guarding = enemy.guard > 0;
-  const portrait = enemy.id === "horizon" ? "◎" : enemy.id === "brineback" ? "◒" : enemy.id === "mirrorfin" ? "◁" : enemy.id === "bellwether" ? "♢" : enemy.id === "inkling" ? "∿" : "◌";
-  const intentKey = intent.type === "attack" ? "intentAttack" : intent.type === "brace" ? "intentBrace" : "intentCharge";
-  const label = `${enemyName(enemy)}, ${enemy.hp} / ${enemy.maxHp}. ${tr("currentFoe")}: ${tr(intentKey, { n: intent.value })}`;
-  return `<button type="button" class="foe-card ${pending ? "targetable" : ""} ${selected ? "foe-selected" : ""} ${enemy.id === "horizon" ? "foe-boss" : ""} ${hit ? "foe-hit" : ""}" data-action="select-foe" data-enemy-index="${index}" data-focus="foe-${index}" aria-label="${escapeHtml(label)}">
-    <span class="foe-art kind-${ENEMIES[enemy.id].kind}" aria-hidden="true"><i></i><b></b><em></em><strong>${portrait}</strong></span>
-    <span class="foe-name-row"><strong>${escapeHtml(enemyName(enemy))}</strong><small>${tr("enemyKind")}</small></span>
-    <span class="foe-health"><i style="width:${Math.max(0, enemy.hp / enemy.maxHp * 100)}%"></i></span>
-    <span class="foe-stats"><span>${enemy.hp} <small>/ ${enemy.maxHp}</small></span>${guarding ? `<span class="foe-guard">◒ ${enemy.guard}</span>` : ""}</span>
-    ${intentMarkup(enemy)}
-    ${pending ? `<span class="target-label">${selected ? tr("targetSelected") : tr("targetFoe")}</span>` : ""}
-    ${hit ? `<span class="impact-number" aria-hidden="true">−${hit.amount}</span>` : ""}
-  </button>`;
-}
-
 function renderLog() {
   const entries = [...(state.run.log || [])].slice(-5).reverse();
   return `<section class="log-panel"><div class="log-heading"><span class="section-eyebrow">${tr("battleLog")}</span><span class="live-dot"></span></div><ol>${entries.map((entry) => `<li>${tr(entry.key, entry.args)}</li>`).join("")}</ol></section>`;
 }
 
+function sceneContext() {
+  return { state, ui, tr, renderCard, renderWake, renderLog, enemyName, currentIntent,
+    getIncomingDamage, getEncounterTitle, escapeHtml };
+}
+
 function renderBattle() {
-  const run = state.run;
-  const fight = run.fight;
-  const stepTitle = getEncounterTitle();
-  const targeting = ui.pendingCard !== null;
-  const handCards = fight.hand.map((id, index) => renderCard(id, {
-    index, playable: true, selected: targeting && ui.pendingCard === index,
-  })).join("");
-  const living = fight.enemies.filter((enemy) => enemy.hp > 0).length;
-  const notice = ui.notice || (targeting ? tr("targetHint") : tr("clickCardHint"));
-  return `<main class="game-scene battle-scene">
-    <section class="battle-heading"><div><span class="section-eyebrow">${tr("chapter")} · ${tr("step", { n: run.stage })}</span><h1>${stepTitle}</h1></div><div class="turn-pill"><span class="live-dot"></span>${tr("turn", { turn: fight.turn })}</div></section>
-    ${renderMetrics()}
-    <div class="battle-grid">
-      <section class="battle-main">
-        <div class="arena-heading"><div><span class="section-eyebrow">${tr("enemyKind")}</span><span class="foe-count">${living} <small>${tr("currentFoe")}</small></span></div><span class="scene-coordinate">${String(run.stage).padStart(2, "0")} / 03</span></div>
-        <div class="arena ${run.encounterId === "boss" ? "arena-boss" : ""}"><div class="arena-glow" aria-hidden="true"></div><div class="arena-orbit" aria-hidden="true"><i></i><b></b></div><div class="foe-row">${fight.enemies.map(renderEnemy).join("")}</div><div class="arena-floor" aria-hidden="true"></div></div>
-        ${renderWake()}
-      </section>
-      <aside class="battle-side">
-        <div class="side-title"><span class="section-eyebrow">${tr("turnTitle")}</span><h2>${tr("turnHint")}</h2></div>
-        <div class="side-actions"><button type="button" class="button button-primary end-turn" data-action="end-turn" data-focus="end-turn">${tr("endTurn")} <span aria-hidden="true">↵</span></button>
-          <button type="button" class="button button-quiet reweave-button" data-action="reweave" data-focus="reweave" ${run.reweaveAvailable && fight.hand.length > 0 ? "" : "disabled"}><span aria-hidden="true">⤨</span>${run.reweaveAvailable ? tr("reweave") : tr("reweaveUsed")}</button>
-          <button type="button" class="deck-button" data-action="deck" data-focus="deck">▤ ${tr("deckPeek")} <span>${run.deck.length}</span></button>
-        </div>
-        ${renderLog()}
-      </aside>
-    </div>
-    <section class="hand-zone"><div class="hand-header"><div><span class="section-eyebrow">${tr("turnTitle")}</span><h2>${tr("clickCardHint")}</h2></div><div class="hand-piles"><span>${tr("drawPile")} <b>${fight.drawPile.length}</b></span><span>${tr("discardPile")} <b>${fight.discardPile.length}</b></span></div></div>
-      <div class="hand-cards">${handCards || `<div class="empty-hand">${tr("clickCardHint")}</div>`}</div>
-      <div class="hand-footer"><span class="keyboard-hint">${notice}</span><span class="hand-limit">${fight.hand.length} / ${MAX_HAND}</span></div>
-    </section>
-  </main>`;
+  return renderBattleScene(sceneContext());
 }
 
 function renderReward() {
@@ -757,14 +684,7 @@ function renderReward() {
 }
 
 function renderRoute() {
-  return `<main class="intermission-scene route-scene"><div class="intermission-glow" aria-hidden="true"></div><section class="intermission-card">
-    <span class="section-eyebrow">${tr("route")} · ${tr("step", { n: 2 })}</span><h1>${tr("routeTitle")}</h1><p>${tr("routeDescription")}</p>
-    <div class="route-cards">
-      <article class="route-card route-quiet"><div class="route-symbol">≈</div><span class="route-tag">${tr("routeRest")} · +8</span><h2>${tr("quietTitle")}</h2><p>${tr("quietDescription")}</p><button type="button" class="button button-secondary" data-action="choose-route" data-route="quiet" data-focus="route-quiet">${tr("choosePassage")} <span>→</span></button></article>
-      <article class="route-card route-rift"><div class="route-symbol">◇</div><span class="route-tag">${tr("routeRisk")} · ${tr("routeRest")} +2</span><h2>${tr("riftTitle")}</h2><p>${tr("riftDescription")}</p><button type="button" class="button button-primary" data-action="choose-route" data-route="rift" data-focus="route-rift">${tr("choosePassage")} <span>→</span></button></article>
-    </div>
-    <div class="route-hull">♥ ${tr("hullFull", { current: state.run.hp, max: state.run.maxHp })}</div>
-  </section></main>`;
+  return renderRouteScene(sceneContext());
 }
 
 function renderSummary() {
@@ -780,6 +700,9 @@ function renderSummary() {
 function renderModal() {
   if (!ui.modal) return "";
   const modal = ui.modal;
+  if (modal === "map") {
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card route-modal" role="dialog" aria-modal="true" aria-labelledby="route-map-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button>${renderRouteScene({ ...sceneContext(), readOnly: true })}</section></div>`;
+  }
   if (modal === "help") {
     const sections = [
       ["01", "Wake"], ["02", "Turn"], ["03", "Reweave"], ["04", "Route"], ["05", "Keys"],
@@ -808,6 +731,7 @@ function renderModal() {
 
 function render() {
   const activeFocus = document.activeElement?.dataset?.focus;
+  document.body.dataset.screen = state.screen;
   document.documentElement.lang = state.locale === "zh" ? "zh-Hans" : "en";
   document.body.classList.toggle("reduce-motion", state.motion);
   const screen = state.screen === "battle" && state.run ? renderBattle()
@@ -815,7 +739,7 @@ function render() {
       : state.screen === "route" && state.run ? renderRoute()
         : state.screen === "summary" && state.run ? renderSummary()
           : renderHome();
-  app.innerHTML = `${renderHeader()}${screen}${renderModal()}<div class="toast" role="status" aria-live="polite">${ui.notice}</div>`;
+  app.innerHTML = `<div class="game-content" ${ui.modal ? "inert" : ""}>${renderHeader()}${screen}</div>${renderModal()}<div class="toast" role="status" aria-live="polite">${ui.notice}</div>`;
   ui.cardFx = null;
   const focusTarget = ui.focusAfterRender || activeFocus;
   const focusElement = focusTarget ? app.querySelector(`[data-focus="${CSS.escape(focusTarget)}"]`) : null;
@@ -859,6 +783,9 @@ function handleAction(actionButton, clickEvent) {
       state.locale = state.locale === "en" ? "zh" : "en";
       saveState();
       render();
+      break;
+    case "map":
+      showModal("map");
       break;
     case "help":
       showModal("help");
@@ -953,6 +880,7 @@ window.addEventListener("keydown", (keyboardEvent) => {
   if (keyboardEvent.key === "Escape") {
     keyboardEvent.preventDefault();
     if (ui.modal) closeModal();
+    else if (ui.pendingCard !== null) { ui.pendingCard = null; ui.notice = ""; render(); }
     else if (state.run && !state.run.result) showModal("pause");
     return;
   }
@@ -966,6 +894,9 @@ window.addEventListener("keydown", (keyboardEvent) => {
   } else if (key === "e") {
     keyboardEvent.preventDefault();
     endTurn();
+  } else if (key === "m") {
+    keyboardEvent.preventDefault();
+    showModal("map");
   } else if (key === "r") {
     keyboardEvent.preventDefault();
     reweave();
