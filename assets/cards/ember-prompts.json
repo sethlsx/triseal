@@ -1,0 +1,32 @@
+{
+  "tool": "Built-in image_gen",
+  "created": "2026-09-30",
+  "reference": "needle is text-generated; other cards use the generated needle only as a style reference",
+  "export": "WebP, 768px width, quality 85; no content edits",
+  "cards": [
+    {
+      "id": "needle",
+      "file": "needle.webp",
+      "source": "exec-45db07bd-9a2c-4ff5-968c-e846e209cc5f.png",
+      "prompt": "Use case: stylized-concept. Asset type: original Triseal fantasy deckbuilding card illustration, one individual image, landscape 3:2.\nSubject: Thread Needle — a single elegant antique brass sailmaker's needle flying diagonally from lower left to upper right, a large needle eye clearly visible at its trailing end. A glowing copper-orange magical thread loops once behind it like a ribbon, tiny sparks and water droplets marking its swift path through a drowned observatory.\nStyle: premium hand-painted gouache and woodcut fantasy game illustration, confident sculpted shapes, dry-brush grain, fine etched brass details, luminous yet restrained, atmospheric maritime arcana. Palette: deep petrol teal and charcoal background, warm copper and burnt orange focal object, pale parchment rim highlights. NOT a flat geometric icon or emoji.\nComposition: one large iconic readable subject occupying central 75 percent, bold silhouette readable at thumbnail scale, calm dark edges, simple atmospheric depth, no frame. Keep the full needle inside image with generous edge space. Painterly underwater haze and faint out-of-focus archive arches only as background. No characters, no interface, no lettering, numbers, logos, watermark, card border, or text. No existing game assets or recognizable franchise motifs. Generate only the art, not a card mockup."
+    },
+    {
+      "id": "cinder",
+      "file": "cinder.webp",
+      "source": "exec-4715cf6e-d627-482c-a3b6-6cd0d57c34b4.png",
+      "prompt": "Use case: stylized-concept. Asset type: one original Triseal fantasy card illustration. Input image role: STYLE reference only; replace its needle subject completely with the subject below.\nSubject: Cinder Pin — a single thick, short, ancient copper pin or rivet heated to orange-white at its sharp point, plunging through black volcanic sea glass with a concentrated impact halo, a small handful of incandescent chips floating in the water. Distinct compact heavy spike silhouette with a broad round head, unlike the long slender needle.\nStyle: hand-painted richly textured maritime fantasy illustration matching the reference's material detail, high contrast focal lighting and ancient drowned observatory atmosphere. Deep petrol teal and charcoal background, copper gold and burnt orange focal magic, pale parchment glints. Keep the background less detailed and softer than the main object, with broad clean readable shapes.\nComposition: landscape 3:2. One large dominant focal silhouette, wholly visible in central 70 percent with edge breathing space, readable at tiny card scale. No UI, no card frame, no lettering, numbers, logo, watermark, collage or grid. Original game art only. Generate this single illustration."
+    },
+    {
+      "id": "crosscut",
+      "file": "crosscut.webp",
+      "source": "exec-728d50bc-eb97-4d18-b7e3-92f2a3e24214.png",
+      "prompt": "Use case: stylized-concept. Asset type: one original Triseal fantasy card illustration. Input image role: STYLE reference only; replace its needle subject completely with the subject below.\nSubject: Crosscut — two curved bright copper-orange cutting trails cross in a forceful broad X, slicing suspended dark kelp into several large clean shapes. Two clean strong intersecting sweeps, sparks at the intersection, dark blue water provides contrast. No needles, no weapons, pure arcane slicing current.\nStyle: hand-painted richly textured maritime fantasy illustration matching the reference's material detail, high contrast focal lighting and ancient drowned observatory atmosphere. Deep petrol teal and charcoal background, copper gold and burnt orange focal magic, pale parchment glints. Keep the background less detailed and softer than the main object, with broad clean readable shapes.\nComposition: landscape 3:2. One large dominant focal silhouette, wholly visible in central 70 percent with edge breathing space, readable at tiny card scale. No UI, no card frame, no lettering, numbers, logo, watermark, collage or grid. Original game art only. Generate this single illustration."
+    },
+    {
+      "id": "shoreless",
+      "file": "shoreless.webp",
+      "source": "exec-1260ec98-d643-4808-9a97-4a0d0751c96c.png",
+      "prompt": "Use case: stylized-concept. Asset type: one original Triseal fantasy card illustration. Input image role: STYLE reference only; replace its needle subject completely with the subject below.\nSubject: No Shore — a tiny antique copper compass at the foreground's center is opening a brilliant ember-orange passage through a vast curling dark wave; beyond it an empty luminous horizon and a distant faint arch. Clear readable composition of a radiant copper compass and an opening in the sea. Warm orange light slicing outward, isolated central silhouette, mysterious exploration and attack.\nStyle: hand-painted richly textured maritime fantasy illustration matching the reference's material detail, high contrast focal lighting and ancient drowned observatory atmosphere. Deep petrol teal and charcoal background, copper gold and burnt orange focal magic, pale parchment glints. Keep the background less detailed and softer than the main object, with broad clean readable shapes.\nComposition: landscape 3:2. One large dominant focal silhouette, wholly visible in central 70 percent with edge breathing space, readable at tiny card scale. No UI, no card frame, no lettering, numbers, logo, watermark, collage or grid. Original game art only. Generate this single illustration."
+    }
+  ]
+}

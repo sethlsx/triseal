@@ -41,6 +41,10 @@ Sigils are **Tide**, **Ember**, and **Glass**. They describe the rhythm of a car
 
 ## Feedback translated into choices
 
+### Illustrated cards
+
+Each of the eleven cards has its own painting with a clear subject: a threaded needle, folded water shield, crystal lens, undertow, glowing pin, anchor, prism, crossing cuts, an open horizon, a shoal wall, or shattered waves. Ember uses copper-orange light, Tide uses turquoise, and Glass uses violet refraction. Art fills the upper part of the card with cost and sigil badges overlaid; card names and rules remain separate readable text. The touch readout and Card atlas provide larger views without adding a permanent panel to combat.
+
 ### Landscape play space
 
 Phone landscape is the primary composition. The drowned observatory fills the viewport, with the chartkeeper and enemies placed directly into its depth. Health and guard stay beside their owners; enemy intentions remain overhead. A compact three-sigil constellation opens the full Resonance explanation on demand. Energy, draw/discard piles, the fanned hand, and the end-turn seal sit around the lower edge. Battle history opens separately instead of occupying a permanent panel. Portrait phones show a rotation prompt, and short landscape screens use compact route, reward, and title layouts.

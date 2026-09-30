@@ -693,6 +693,10 @@ function continueRun() {
   render();
 }
 
+function renderCardImage(cardId, className = "card-art-image", lazy = false) {
+  return `<img class="${className}" src="./assets/cards/${cardId}.webp" width="768" height="512" alt="" draggable="false" decoding="async"${lazy ? ' loading="lazy"' : ""} />`;
+}
+
 function renderCard(cardId, options = {}) {
   const card = CARDS[cardId];
   const lang = card[state.locale] || card.en;
@@ -709,9 +713,9 @@ function renderCard(cardId, options = {}) {
   const aria = `${lang.name}, ${tr("cardCost")} ${card.cost}, ${tr(sigilKey)}. ${lang.text}${previewText ? ` ${previewText}` : ""}`;
   const handOffset = options.reward ? 0 : index - (state.run.fight.hand.length - 1) / 2;
   const fanStyle = options.reward ? "" : `style="--hand-index:${handOffset};--hand-lift:${Math.abs(handOffset) * 3}px;--hand-angle:${handOffset * 3}deg;--card-order:${index}"`;
-  return `<button class="playing-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" ${fanStyle} type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
+  return `<button class="playing-card illustrated-card tone-${card.tone} ${selected} ${options.reward ? "reward-card" : "hand-card"} ${disabled ? "unavailable" : ""}" ${fanStyle} type="button" data-action="${buttonAction}" ${dataIndex} ${dataId} data-focus="${focusId}" aria-label="${escapeHtml(aria)}" ${disabled ? "aria-disabled=true" : ""}>
     <span class="card-topline"><span class="card-cost ${card.cost === 0 ? "free" : ""}">${card.cost}</span><span class="sigil-chip" title="${tr(sigilKey)}">${SIGIL_GLYPH[card.sigil]}</span></span>
-    <span class="card-illustration" aria-hidden="true"><span>${card.glyph}</span><i></i>${prismBonus ? `<b class="prism-card-bonus">+3</b>` : ""}</span>
+    <span class="card-illustration" aria-hidden="true">${renderCardImage(cardId)}${prismBonus ? `<b class="prism-card-bonus">+3</b>` : ""}</span>
     <span class="card-title">${escapeHtml(lang.name)}</span>
     <span class="card-description">${escapeHtml(lang.text)}</span>
     <span class="card-bottomline"><span class="card-sigil-name">${tr(sigilKey)}</span><span class="card-cost-label">${tr("cardCost")}</span></span>
@@ -854,7 +858,8 @@ function renderBattle() {
   })).join("");
   const notice = ui.notice || (ui.animating ? tr("resolving") : targeting ? tr("targetHint") : tr(window.matchMedia("(pointer: coarse)").matches ? "touchCardHint" : "clickCardHint"));
   const latest = run.log.at(-1);
-  const inspected = ui.previewCard !== null ? CARDS[fight.hand[ui.previewCard]] : null;
+  const inspectedId = ui.previewCard !== null ? fight.hand[ui.previewCard] : null;
+  const inspected = inspectedId ? CARDS[inspectedId] : null;
   return `<main class="game-scene battle-scene landscape-battle ${ui.animating ? "combat-resolving" : ""}">
     ${renderBattleScenery(run.encounterId)}
     <div class="battle-location"><small>${tr("step", { n: run.stage })}</small><h1>${getEncounterTitle()}</h1></div>
@@ -870,7 +875,7 @@ function renderBattle() {
       <div class="hand-cards">${handCards || `<div class="empty-hand">${tr(ui.enemyTurn ? "enemiesActing" : "noCards")}</div>`}</div>
       <div class="hand-footer"><span>${notice}</span></div>
     </section>
-    ${inspected ? `<aside class="card-readout tone-${inspected.sigil}" aria-live="polite"><strong>${escapeHtml(inspected[state.locale].name)}</strong><span>${escapeHtml(inspected[state.locale].text)}</span><small>${tr(inspected.target ? "touchTargetHint" : "touchConfirmHint")}</small></aside>` : ""}
+    ${inspected ? `<aside class="card-readout illustrated-readout tone-${inspected.sigil}" aria-live="polite">${renderCardImage(inspectedId, "readout-art")}<div class="readout-copy"><strong>${escapeHtml(inspected[state.locale].name)}</strong><span>${escapeHtml(inspected[state.locale].text)}</span><small>${tr(inspected.target ? "touchTargetHint" : "touchConfirmHint")}</small></div></aside>` : ""}
     <button class="pile-button discard-pile" type="button" data-action="discard-pile" data-focus="discard-pile" aria-label="${tr("discardPile")}: ${fight.discardPile.length}"><span class="pile-symbol" aria-hidden="true">▱</span><b>${fight.discardPile.length}</b><small>${tr("discardPile")}</small></button>
     <div class="battle-actions"><button type="button" class="end-turn" data-action="end-turn" data-focus="end-turn"><span>${tr(ui.animating ? "resolving" : "endTurn")}</span><i aria-hidden="true">${ui.animating ? "···" : "↠"}</i></button>
       <button type="button" class="reweave-button" data-action="reweave" data-focus="reweave" aria-label="${tr("reweaveAvailable")}" ${run.reweaveAvailable && fight.hand.length > 0 ? "" : "disabled"}><span aria-hidden="true">⤨</span>${run.reweaveAvailable ? tr("reweave") : tr("reweaveUsed")}</button>
@@ -919,11 +924,22 @@ function renderModal() {
       ${modal === "sigils" ? `${renderWake()}<p class="sigil-explanation">${tr("helpWakeBody")}</p>` : renderLog()}
     </section></div>`;
   }
+  if (modal === "card-gallery") {
+    const gallery = Object.entries(CARDS).map(([id, card]) => {
+      const lang = card[state.locale] || card.en;
+      return `<article class="gallery-card tone-${card.tone}">
+        <div class="gallery-art">${renderCardImage(id, "card-art-image", true)}<span class="card-cost ${card.cost === 0 ? "free" : ""}" role="img" aria-label="${tr("cardCost")} ${card.cost}">${card.cost}</span><span class="sigil-chip" aria-hidden="true">${SIGIL_GLYPH[card.sigil]}</span></div>
+        <div class="gallery-copy"><small>${tr(SIGIL_NAME[card.sigil][state.locale])}</small><h3>${escapeHtml(lang.name)}</h3><p>${escapeHtml(lang.text)}</p></div>
+      </article>`;
+    }).join("");
+    return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card gallery-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">TRISEAL</span><h2 id="modal-title">${tr("cardGallery")}</h2><p class="gallery-intro">${tr("cardGalleryDescription")}</p><div class="card-gallery-grid">${gallery}</div><button class="button button-quiet gallery-back" type="button" data-action="help" data-focus="gallery-help">← ${tr("howTo")}</button></section></div>`;
+  }
   if (modal === "help") {
     const sections = [
       ["01", "Wake"], ["02", "Turn"], ["03", "Reweave"], ["04", "Route"], ["05", "Keys"],
     ];
     return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card help-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">TRISEAL</span><h2 id="modal-title">${tr("helpTitle")}</h2>
+      <button type="button" class="gallery-link" data-action="card-gallery" data-focus="card-gallery"><span class="gallery-link-art" aria-hidden="true">${["needle", "brace", "glassline"].map((id) => renderCardImage(id)).join("")}</span><span><strong>${tr("cardGallery")}</strong><small>${tr("cardGalleryDescription")}</small></span><b aria-hidden="true">→</b></button>
       <div class="help-grid">${sections.map(([number, id]) => `<article><span class="help-number">${number}</span><h3>${tr(`help${id}Title`)}</h3><p>${tr(`help${id}Body`)}</p></article>`).join("")}</div>
     </section></div>`;
   }
@@ -941,7 +957,7 @@ function renderModal() {
     const pile = modal === "draw-pile" ? state.run.fight.drawPile : modal === "discard-pile" ? state.run.fight.discardPile : state.run.deck;
     const title = tr(modal === "draw-pile" ? "drawPile" : modal === "discard-pile" ? "discardPile" : "deckTitle");
     const counts = pile.reduce((result, id) => { result[id] = (result[id] || 0) + 1; return result; }, {});
-    const cards = Object.entries(counts).map(([id, amount]) => `<article class="deck-entry tone-${CARDS[id].tone}"><span class="sigil-chip">${SIGIL_GLYPH[CARDS[id].sigil]}</span><div><strong>${escapeHtml(cardName(id))}</strong><small>${escapeHtml(CARDS[id][state.locale].text)}</small></div><b>×${amount}</b></article>`).join("");
+    const cards = Object.entries(counts).map(([id, amount]) => `<article class="deck-entry tone-${CARDS[id].tone}">${renderCardImage(id, "deck-art", true)}<div><strong>${escapeHtml(cardName(id))} <span class="deck-sigil">· ${tr(SIGIL_NAME[CARDS[id].sigil][state.locale])}</span></strong><small>${escapeHtml(CARDS[id][state.locale].text)}</small></div><b>×${amount}</b></article>`).join("");
     return `<div class="modal-scrim" data-action="close-outside"><section class="modal-card deck-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title"><button class="modal-close" data-action="close-modal" data-focus="modal-close" aria-label="${tr("close")}">×</button><span class="section-eyebrow">${tr("chapter")}</span><h2 id="modal-title">${title}</h2><p>${tr("deckSummary", { draw: state.run.fight.drawPile.length, discard: state.run.fight.discardPile.length, hand: state.run.fight.hand.length })}</p><div class="deck-list">${cards || `<p>${tr("noCards")}</p>`}</div>${modal !== "deck" ? `<button type="button" class="button button-quiet modal-resume" data-action="deck" data-focus="all-deck">${tr("deckPeek")} →</button>` : ""}</section></div>`;
   }
   return "";
@@ -971,6 +987,9 @@ function render() {
   const hand = app.querySelector(".hand-cards");
   if (hand) hand.scrollLeft = handScroll;
   updateOrientationAccess();
+  app.querySelectorAll(":scope > .topbar, :scope > main").forEach((element) => {
+    element.inert = Boolean(ui.modal);
+  });
   if (ui.animating) app.querySelectorAll("button").forEach((button) => { button.disabled = true; });
   const focusTarget = ui.focusAfterRender || activeFocus;
   const focusElement = focusTarget ? app.querySelector(`[data-focus="${CSS.escape(focusTarget)}"]`) : null;
@@ -1016,7 +1035,8 @@ function handleAction(actionButton, clickEvent) {
       render();
       break;
     case "help":
-      showModal("help");
+    case "card-gallery":
+      showModal(action);
       break;
     case "settings":
       showModal("settings");
@@ -1139,7 +1159,26 @@ window.addEventListener("keydown", (keyboardEvent) => {
     else if (state.run && !state.run.result) showModal("pause");
     return;
   }
-  if (ui.modal || state.screen !== "battle" || !state.run) return;
+  if (ui.modal) {
+    if (keyboardEvent.key === "Tab") {
+      const dialog = app.querySelector('[role="dialog"]');
+      const controls = [...dialog.querySelectorAll('button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')]
+        .filter((element) => !element.closest("[inert]") && element.getClientRects().length > 0);
+      const first = controls[0];
+      const last = controls.at(-1);
+      const active = document.activeElement;
+      if (!first) keyboardEvent.preventDefault();
+      else if (keyboardEvent.shiftKey && (active === first || !dialog.contains(active))) {
+        keyboardEvent.preventDefault();
+        last.focus();
+      } else if (!keyboardEvent.shiftKey && (active === last || !dialog.contains(active))) {
+        keyboardEvent.preventDefault();
+        first.focus();
+      }
+    }
+    return;
+  }
+  if (state.screen !== "battle" || !state.run) return;
   if (portraitLayout.matches) return;
   const target = keyboardEvent.target;
   if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target?.isContentEditable) return;

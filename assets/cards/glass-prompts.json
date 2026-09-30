@@ -1,0 +1,39 @@
+{
+  "generator": "OpenAI built-in image_gen",
+  "createdAt": "2026-09-30",
+  "useCase": "stylized-concept",
+  "styleReference": "exec-45db07bd-9a2c-4ff5-968c-e846e209cc5f.png",
+  "referenceRole": "Original Triseal Thread Needle illustration; style only",
+  "output": {
+    "format": "WebP",
+    "width": 768,
+    "height": 512,
+    "quality": 85
+  },
+  "assets": [
+    {
+      "id": "glassline",
+      "file": "glassline.webp",
+      "source": "exec-c257dc0e-5a45-4d00-80f2-2863ad162e75.png",
+      "prompt": "Use case: stylized-concept. Asset: original fantasy card illustration for Triseal. Generate one new full-bleed horizontal 3:2 illustration. The provided image is a STYLE reference only: match its rich painterly maritime fantasy, tactile materials, finely painted reflected light, deep petrol underwater ruins and dramatic readable focal object. Do not reproduce its needle or orange thread. Bold centrally framed focal silhouette stays inside the center 75 percent for small card cropping. Rich dark teal atmosphere, pale lavender and amethyst glass magic, ivory highlights, subtle suspended bubbles and defocused submerged observatory arches. No text, letters, numbers, border, UI, logo, watermark, collage, grids, or multiple panels.\nPrimary request: Read the Glass: a single large floating translucent lavender crystal lens above an open sea-worn folio, hovering violet refracted constellations connecting a few sharp points of light through the lens. The open folio and floating lens form one clear centered magical instrument, dramatic luminous glass rim and ivory aged blank pages; no legible writing."
+    },
+    {
+      "id": "undertow",
+      "file": "undertow.webp",
+      "source": "exec-9b078d67-973b-458a-9e54-6e1d2bfb4f17.png",
+      "prompt": "Use case: stylized-concept. Asset: original fantasy card illustration for Triseal. Generate one new full-bleed horizontal 3:2 illustration. The provided image is a STYLE reference only: match its rich painterly maritime fantasy, tactile materials, finely painted reflected light, deep petrol underwater ruins and dramatic readable focal object. Do not reproduce its needle or orange thread. Bold centrally framed focal silhouette stays inside the center 75 percent for small card cropping. Rich dark teal atmosphere, pale lavender and amethyst glass magic, ivory highlights, subtle suspended bubbles and defocused submerged observatory arches. No text, letters, numbers, border, UI, logo, watermark, collage, grids, or multiple panels.\nPrimary request: Undertow: a hooked luminous violet underwater current curling tightly around one jagged obsidian shard, force and shelter in one powerful enclosing spiral. The shard is central with a sharp upright silhouette, the bright curved current sweeps around it like a protective hook and trails outward. Deep indigo violet with bright lavender glass accents, strong motion and simple readable composition."
+    },
+    {
+      "id": "prism",
+      "file": "prism.webp",
+      "source": "exec-e85d2586-4f3e-4527-942f-a82a36e3ed66.png",
+      "prompt": "Use case: stylized-concept. Asset: original fantasy card illustration for Triseal. Generate one new full-bleed horizontal 3:2 illustration. The provided image is a STYLE reference only: match its rich painterly maritime fantasy, tactile materials, finely painted reflected light, deep petrol underwater ruins and dramatic readable focal object. Do not reproduce its needle or orange thread. Bold centrally framed focal silhouette stays inside the center 75 percent for small card cropping. Rich dark teal atmosphere, pale lavender and amethyst glass magic, ivory highlights, subtle suspended bubbles and defocused submerged observatory arches. No text, letters, numbers, border, UI, logo, watermark, collage, grids, or multiple panels.\nPrimary request: Prism Draft: one large suspended faceted translucent glass prism, lilac beams bend through its facets into a broad protective arch of small floating crystalline shards. A dominant centered glass prism with dramatic ivory edges, pale lavender inner refractions, coherent arcing motion around it. Dark aquatic observatory background quiet and painterly."
+    },
+    {
+      "id": "wavebreak",
+      "file": "wavebreak.webp",
+      "source": "exec-facc9173-2edf-4545-a30c-81a3947783c8.png",
+      "prompt": "Use case: stylized-concept. Asset: original fantasy card illustration for Triseal. Generate one new full-bleed horizontal 3:2 illustration. The provided image is a STYLE reference only: match its rich painterly maritime fantasy, tactile materials, finely painted reflected light, deep petrol underwater ruins and dramatic readable focal object. Do not reproduce its needle or orange thread. Bold centrally framed focal silhouette stays inside the center 75 percent for small card cropping. Rich dark teal atmosphere, pale lavender and amethyst glass magic, ivory highlights, subtle suspended bubbles and defocused submerged observatory arches. No text, letters, numbers, border, UI, logo, watermark, collage, grids, or multiple panels.\nPrimary request: Wavebreak: a thick turquoise wave crashing forcefully against one large upright violet crystal and bursting into sharp sparkling glass spray. One strong dramatic central crest with brilliant ivory lip, the amethyst crystal rising through it, a few large angular shards in the impact. Turquoise flowing water against crystalline violet facets, dynamic diagonal lighting, readable silhouette."
+    }
+  ]
+}
