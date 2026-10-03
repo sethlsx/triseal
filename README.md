@@ -16,7 +16,7 @@ Download the [Android APK](https://github.com/sethlsx/triseal/releases/latest/do
 
 New game content downloads in the background when you open or resume the app online. A downloaded update is used on the next launch; Android Back opens a menu with **Restart game** when an update is ready. Updates keep the same local save location and never replace files in the middle of a battle. A change to the native Android shell still requires an APK update.
 
-Each push to `main` automatically publishes a content bundle through the dedicated `mobile-channel` branch. The download connection must be able to reach GitHub. For the format, build instructions, and update behavior, see [Mobile delivery](docs/MOBILE.md).
+Content bundles are published through the dedicated `mobile-channel` branch only when the **Publish Android content updates** workflow is run manually on `main`. Ordinary source pushes do not package or publish an update, conserving GitHub Actions quota. The download connection must be able to reach GitHub. For the format, build instructions, and update behavior, see [Mobile delivery](docs/MOBILE.md).
 
 ### Browser
 

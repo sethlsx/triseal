@@ -34,9 +34,11 @@ The output is `dist/triseal-android.apk` with a SHA-256 file beside it. The buil
 
 ### Publish game content
 
-Every push to `main` runs `.github/workflows/publish.yml`. The workflow needs `contents: write` and publishes only `dist/site/` to the dedicated generated `mobile-channel` branch. The Android app reads the manifest and ZIP through GitHub's HTTPS raw-content service. No GitHub Pages configuration or custom domain is required.
+Ordinary source pushes do not run `.github/workflows/publish.yml` or publish a phone update. To conserve GitHub Actions quota, develop and validate locally, then batch completed work into a milestone push. Publish only when the user explicitly requests a phone content release.
 
-The publishing workflow uses a separate CI worktree and an ordinary push to preserve channel history. Only pushes to `main` start the workflow, so the generated-branch push does not create a publishing loop. Concurrent publishers are serialized. Treat `mobile-channel` as generated output; author game changes on `main`.
+For an approved release, push the finished release commit to `main`, open **Actions → Publish Android content updates → Run workflow**, select `main`, and run it once. The workflow accepts only manual dispatches, and its publishing job skips other branches or tags. It needs `contents: write` and publishes only `dist/site/` to the dedicated generated `mobile-channel` branch. The Android app reads the manifest and ZIP through GitHub's HTTPS raw-content service. No GitHub Pages configuration or custom domain is required.
+
+The publishing workflow uses a separate CI worktree and an ordinary push to preserve channel history. The generated-branch push cannot trigger another publication. Concurrent publishers are serialized. Treat `mobile-channel` as generated output; author game changes on `main`. Do not dispatch a release just to test source or workflow edits; use local checks instead.
 
 Generate the same distribution locally with Node 22 and the system `zip` command:
 
@@ -65,7 +67,7 @@ https://github.com/sethlsx/triseal/releases/latest/download/triseal-android.apk
 
 Publish a signed APK under that exact asset name in a non-draft, non-prerelease GitHub release. Future game-content deployments do not create a new APK or require access to the private signing key. Keep that key outside the repository and reuse it for later Android shell releases.
 
-Check the workflow result and the live update manifest after each push before telling players that the new version is available. A source push alone does not mean the manifest has changed. The current channel contains the current bundle; if a phone sees a cached older manifest whose ZIP is no longer at the branch tip, its failed fetch must be harmless and the next update check can retry.
+Check the workflow result and the live update manifest after each manual publication before telling players that the new version is available. A source push alone leaves the phone content channel unchanged. The current channel contains the current bundle; if a phone sees a cached older manifest whose ZIP is no longer at the branch tip, its failed fetch must be harmless and the next update check can retry.
 
 The generated `install/index.html` is a bilingual download page ready for a future web host. GitHub raw-content URLs deliver files, not a usable browser-play website; use the GitHub release APK link for installation until a working static host is explicitly configured.
 
